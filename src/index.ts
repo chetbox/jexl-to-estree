@@ -1,142 +1,141 @@
 import JexlAst from "jexl/Ast";
 import JexlGrammar, { Element as JexlElement } from "jexl/Grammar";
+import { builders as b, ASTNode } from "ast-types";
+import { ExpressionKind } from "ast-types/gen/kinds";
 
-export function escapeKeyOfExpressionIdentifier(
-  identifier: string,
-  ...keys: string[]
-): string {
-  if (keys.length === 0) {
-    return identifier;
-  }
-  const key = keys[0];
-  return escapeKeyOfExpressionIdentifier(
-    key.match(/^[A-Za-z_]\w*$/)
-      ? `${identifier}.${key}`
-      : `${identifier}["${key.replace(/"/g, '\\"')}"]`,
-    ...keys.slice(1)
-  );
-}
-
-export function jexlExpressionStringFromAst(
+export function estreeFromJexlAst(
   grammar: JexlGrammar,
-  ast: JexlAst | null,
+  ast: JexlAst,
   ancestors: JexlAst[] = []
-): string {
-  if (!ast) {
-    return "";
-  }
-
+): ExpressionKind {
   const recur = (childAst: JexlAst) =>
-    jexlExpressionStringFromAst(grammar, childAst, [...ancestors, ast]);
-
-  const recurWithBracketsIfRequired = (
-    parentElement: JexlElement | null,
-    childAst: JexlAst,
-    { isRightHandSide = false }: { isRightHandSide?: boolean } = {}
-  ): string => {
-    const parentPrecedence =
-      parentElement?.type === "binaryOp" ? parentElement.precedence : 0;
-
-    const childBinaryExpressionElement =
-      childAst.type === "BinaryExpression"
-        ? grammar.elements[childAst.operator]
-        : null;
-    const childPrecedence =
-      childAst.type === "ConditionalExpression"
-        ? 0
-        : childBinaryExpressionElement?.type === "binaryOp"
-        ? childBinaryExpressionElement.precedence
-        : Infinity;
-
-    const rhsOfBinaryOpInTernaryConditionWorkaround =
-      isRightHandSide &&
-      childAst.type === "FunctionCall" &&
-      childAst.pool === "transforms" &&
-      parentElement?.type === "binaryOp" &&
-      ancestors[ancestors.length - 1]?.type === "ConditionalExpression";
-
-    const childExpressionString = recur(childAst);
-    if (
-      isRightHandSide
-        ? parentPrecedence >= childPrecedence ||
-          rhsOfBinaryOpInTernaryConditionWorkaround
-        : parentPrecedence > childPrecedence
-    ) {
-      return `(${childExpressionString})`;
-    }
-    return childExpressionString;
-  };
+    estreeFromJexlAst(grammar, childAst, [...ancestors, ast]);
 
   switch (ast.type) {
     case "Literal":
-      if (typeof ast.value === "number" && ast.value.toString().includes("e")) {
-        const prefix = ast.value < 0 ? "-" : "";
-        return (
-          prefix +
-          Math.abs(ast.value).toLocaleString("en-US", { useGrouping: false })
-        );
-      }
-      return JSON.stringify(ast.value);
+      return b.literal(ast.value);
+
     case "Identifier":
-      // TODO: if identifierAst can generate FilterExpressions when required then can we ditch `escapeKeyOfExpressionIdentifier`?
       if (ast.from) {
-        return `${recur(ast.from)}${escapeKeyOfExpressionIdentifier(
-          "",
-          ast.value
-        )}`;
+        return b.memberExpression(
+          recur(ast.from),
+          b.identifier(ast.value),
+          false
+        );
       } else {
-        return escapeKeyOfExpressionIdentifier(ast.value);
+        return b.identifier(ast.value);
       }
-    case "UnaryExpression": {
-      let right = recur(ast.right);
-      if (
-        ast.right.type === "BinaryExpression" ||
-        ast.right.type === "ConditionalExpression"
-      ) {
-        right = `(${right})`;
+    case "UnaryExpression":
+      return b.unaryExpression(ast.operator as any, recur(ast.right));
+    // TODO: check for other unary expressions in grammar?
+    case "BinaryExpression":
+      switch (ast.operator) {
+        case "&&":
+        case "||":
+          return b.logicalExpression(
+            ast.operator,
+            recur(ast.left),
+            recur(ast.right)
+          );
+        case "===":
+        case "!==":
+        case "<":
+        case "<=":
+        case ">":
+        case ">=":
+        case "<<":
+        case ">>":
+        case ">>>":
+        case "+":
+        case "-":
+        case "*":
+        case "/":
+        case "%":
+        case "&":
+        case "|":
+        case "in":
+        case "instanceof":
+        case "**":
+          return b.binaryExpression(
+            ast.operator,
+            recur(ast.left),
+            recur(ast.right)
+          );
+        case "==":
+        case "!=":
+          return b.binaryExpression(
+            ast.operator === "==" ? "===" : "!==",
+            recur(ast.left),
+            recur(ast.right)
+          );
+        case "^":
+          return b.callExpression(
+            b.memberExpression(
+              b.identifier("Math"),
+              b.identifier("pow"),
+              false
+            ),
+            [recur(ast.left), recur(ast.right)]
+          );
+        case "//":
+          return b.callExpression(
+            b.memberExpression(
+              b.identifier("Math"),
+              b.identifier("floor"),
+              false
+            ),
+            [b.binaryExpression("/", recur(ast.left), recur(ast.right))]
+          );
+        default:
+          throw new Error("Unknown binary operator: " + ast.operator);
+        // TODO: Look for other operators in the grammar?
       }
-      return `${ast.operator}${right}`;
-    }
-    case "BinaryExpression": {
-      const left = recurWithBracketsIfRequired(
-        grammar.elements[ast.operator],
-        ast.left
+    case "ConditionalExpression":
+      return b.conditionalExpression(
+        recur(ast.test),
+        recur(ast.consequent),
+        recur(ast.alternate)
       );
-      const right = recurWithBracketsIfRequired(
-        grammar.elements[ast.operator],
-        ast.right,
-        { isRightHandSide: true }
-      );
-      return `${left} ${ast.operator} ${right}`;
-    }
-    case "ConditionalExpression": {
-      const test = recurWithBracketsIfRequired(null, ast.test);
-      const consequent = recurWithBracketsIfRequired(null, ast.consequent);
-      const alternate = recurWithBracketsIfRequired(null, ast.alternate);
-      return `${test} ? ${consequent} : ${alternate}`;
-    }
     case "ArrayLiteral":
-      return `[${ast.value.map(recur).join(", ")}]`;
+      return b.arrayExpression(ast.value.map(recur));
     case "ObjectLiteral":
-      return `{ ${Object.entries(ast.value)
-        .map(([key, value]) => `${key}: ${recur(value)}`)
-        .join(", ")} }`;
+      return b.objectExpression(
+        Object.entries(ast.value).map(([key, value]) =>
+          b.objectProperty(b.identifier(key), recur(value))
+        )
+      );
     case "FilterExpression":
-      return `${recur(ast.subject)}[${ast.relative ? "." : ""}${recur(
-        ast.expr
-      )}]`;
-    case "FunctionCall":
-      switch (ast.pool) {
-        case "functions":
-          return `${ast.name}(${ast.args.map(recur).join(", ")})`;
-        case "transforms":
-          // Note that transforms always have at least one argument
-          // i.e. `a | b` is `b` with one argument of `a`
-          return `${recur(ast.args[0])} | ${ast.name}${
-            ast.args.length > 1
-              ? `(${ast.args.slice(1).map(recur).join(", ")})`
-              : ""
-          }`;
+      if (ast.relative) {
+        return b.callExpression(
+          b.memberExpression(recur(ast.subject), b.identifier("filter")),
+          [
+            b.arrowFunctionExpression(
+              [
+                b.objectPattern([
+                  b.property.from({
+                    kind: "init",
+                    key: b.identifier("bar"),
+                    value: b.identifier("bar"),
+                    shorthand: true,
+                  }),
+                ]),
+              ],
+              recur(ast.expr)
+            ),
+          ]
+        );
+      } else {
+        if (ast.expr.type === "Literal" || ast.expr.type === "Identifier") {
+          // We are just indexing into an object/array
+          return b.memberExpression(recur(ast.subject), recur(ast.expr), true);
+        } else {
+          return b.callExpression(
+            b.memberExpression(recur(ast.subject), b.identifier("filter")),
+            [b.arrowFunctionExpression([], recur(ast.expr))]
+          );
+        }
       }
+    case "FunctionCall":
+      return b.callExpression(b.identifier(ast.name), ast.args.map(recur));
   }
 }

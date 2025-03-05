@@ -1,20 +1,22 @@
 {
-  "name": "jexl-to-string",
-  "version": "2.3.4",
-  "description": "Convert a Jexl expression AST back to a string",
+  "name": "jexl-to-estree",
+  "version": "0.0.1",
+  "description": "Convert a Jexl expression AST to an ESTree expression AST",
   "main": "dist/index.js",
   "files": [
     "dist",
     "src"
   ],
-  "repository": "https://github.com/chetbox/jexl-to-string",
+  "repository": "https://github.com/chetbox/jexl-to-estree",
   "author": "Chetan Padia <chetbox@noreply.users.github.com>",
   "license": "MIT",
   "devDependencies": {
+    "@types/escodegen": "^0.0.10",
     "@types/jest": "^28.1.6",
     "@types/jexl": "^2.3.1",
     "jest": "^28.1.3",
     "jexl": "^2.3.0",
+    "recast": "^0.23.11",
     "ts-jest": "^28.0.7",
     "typescript": "^4.7.4"
   },
@@ -22,5 +24,8 @@
     "build": "tsc",
     "test": "jest"
   },
-  "packageManager": "yarn@4.7.0"
+  "packageManager": "yarn@4.7.0",
+  "dependencies": {
+    "ast-types": "^0.14.2"
+  }
 }
