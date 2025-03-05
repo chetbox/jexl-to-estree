@@ -843,13 +843,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/escodegen@npm:^0.0.10":
-  version: 0.0.10
-  resolution: "@types/escodegen@npm:0.0.10"
-  checksum: 10c0/e6a010c6cd5bd2d31db61f79dcb95af64df1d735417a78167c753768a850a2983730b855ad7c9e080e279b2b09678d3674c3c735e25613d4058341fcd90988f1
-  languageName: node
-  linkType: hard
-
 "@types/graceful-fs@npm:^4.1.3":
   version: 4.1.5
   resolution: "@types/graceful-fs@npm:4.1.5"
@@ -2427,11 +2420,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jexl-to-string@workspace:.":
+"jexl-to-estree@workspace:.":
   version: 0.0.0-use.local
-  resolution: "jexl-to-string@workspace:."
+  resolution: "jexl-to-estree@workspace:."
   dependencies:
-    "@types/escodegen": "npm:^0.0.10"
     "@types/jest": "npm:^28.1.6"
     "@types/jexl": "npm:^2.3.1"
     ast-types: "npm:^0.14.2"
