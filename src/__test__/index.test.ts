@@ -1,6 +1,7 @@
-import { estreeFromJexlAst } from "..";
 import { Jexl } from "jexl";
 import * as recast from "recast";
+import { describe, expect, test } from "vitest";
+import { estreeFromJexlAst } from "..";
 
 describe("estreeFromJexlAst", () => {
   // Create a Jexl AST from an expression and then convert back to an expression and see if it looks right
