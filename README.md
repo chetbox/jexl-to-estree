@@ -19,7 +19,7 @@ yarn add jexl-to-estree
 ## Example
 
 ```ts
-import { estreeFromJexlAst } from "jexl-to-string";
+import { estreeFromJexlAst } from "jexl-to-estree";
 import { Jexl } from "jexl";
 import * as recast from "recast";
 
