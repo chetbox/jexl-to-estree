@@ -17,6 +17,11 @@ jexl.addFunction("print", (value) => {
   console.log(value);
   return true;
 });
+jexl.addUnaryOp("~", (value: unknown) => !!value);
+jexl.addBinaryOp("<>", 20, (a: string, b: string) => a + b);
+jexl.addBinaryOp("..", 20, (a: number, b: number) => {
+  return new Array(b - a).fill(0).map((_, i) => a + i);
+});
 
 describe("estreeFromJexlAst", () => {
   // Create a Jexl AST from an expression and then convert back to an expression and see if it looks right
@@ -77,6 +82,10 @@ describe("estreeFromJexlAst", () => {
       "print(foo) && bar",
       "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
     ], // uses `print` function block inline
+    ["!foo", null], // unary operator
+    ["~foo", "!!foo"], // custom unary operator
+    ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
+    ["5 .. 15", "new Array(15 - 5).fill(0).map((_, i) => 5 + i)"], // uses `..` custom binary operator
   ];
 
   test.each(expressions)("`%s`", (input, expected) => {

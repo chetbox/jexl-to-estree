@@ -1,8 +1,19 @@
 diff --git a/node_modules/@types/jexl/Grammar.d.ts b/node_modules/@types/jexl/Grammar.d.ts
-index 144396e..cdd6c61 100644
+index 144396e..98bce8e 100644
 --- a/node_modules/@types/jexl/Grammar.d.ts
 +++ b/node_modules/@types/jexl/Grammar.d.ts
-@@ -20,5 +20,5 @@ export type Element =
+@@ -15,10 +15,16 @@ export type Element =
+         precedence: number;
+         eval?: (...args: unknown[]) => unknown;
+         evalOnDemand?: (...args: unknown[]) => unknown;
++    }
++    | {
++        type: "unaryOp";
++        precedence: number;
++        eval?: (...args: unknown[]) => unknown;
++        evalOnDemand?: (...args: unknown[]) => unknown;
+     };
+ 
  export default interface Grammar {
      elements: { [symbol: string]: Element };
      functions: { [name: string]: (...args: unknown[]) => unknown };

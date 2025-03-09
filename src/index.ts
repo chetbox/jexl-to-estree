@@ -22,6 +22,66 @@ export function estreeFromJexlAst(
   const recur = (childAst: JexlAst) =>
     estreeFromJexlAst(grammar, childAst, options, [...ancestors, ast]);
 
+  const createExpressionFromFunction = (
+    func: Function | undefined,
+    args: ExpressionKind[]
+  ) => {
+    if (!func) {
+      return undefined;
+    }
+
+    let functionBodyAst: namedTypes.Statement | undefined =
+      options.functionParser?.(func.toString()).program.body[0];
+
+    if (functionBodyAst) {
+      // If the function body is an expression statement, unwrap it
+      if (namedTypes.ExpressionStatement.check(functionBodyAst)) {
+        functionBodyAst = functionBodyAst.expression;
+      }
+
+      if (
+        namedTypes.ArrowFunctionExpression.check(functionBodyAst) ||
+        namedTypes.FunctionDeclaration.check(functionBodyAst)
+      ) {
+        const functionParams = functionBodyAst.params;
+        const functionBody = functionBodyAst.body;
+
+        // Replace occurrences of the parameter in the function body
+        // with the corresponding argument
+        for (let i = 0; i < functionParams.length; i++) {
+          const functionParam = functionParams[i];
+          if (namedTypes.Identifier.check(functionParam)) {
+            visit(functionBody, {
+              visitIdentifier(path) {
+                if (path.node.name === functionParam.name) {
+                  return args[i];
+                }
+                this.traverse(path);
+              },
+            });
+          }
+        }
+
+        if (namedTypes.BlockStatement.check(functionBody)) {
+          // If the function is just a return statement, unwrap it
+          if (functionBody.body.length === 1) {
+            const expression = functionBody.body[0];
+            if (namedTypes.ReturnStatement.check(expression)) {
+              return expression.argument!;
+            }
+          }
+          // Otherwise, wrap the statements in an arrow function
+          return b.callExpression(
+            b.arrowFunctionExpression([], functionBody),
+            []
+          );
+        }
+
+        return functionBody;
+      }
+    }
+  };
+
   switch (ast.type) {
     case "Literal":
       return b.literal(ast.value);
@@ -37,8 +97,24 @@ export function estreeFromJexlAst(
         return b.identifier(ast.value);
       }
     case "UnaryExpression":
-      return b.unaryExpression(ast.operator as any, recur(ast.right));
-    // TODO: check for other unary expressions in grammar?
+      switch (ast.operator) {
+        case "!":
+          return b.unaryExpression("!", recur(ast.right));
+        default: {
+          // Find custom unary operators in the grammar
+          const unaryOperator = grammar.elements[ast.operator];
+          if (unaryOperator?.type === "unaryOp" && unaryOperator.eval) {
+            const newAstFromFunction = createExpressionFromFunction(
+              unaryOperator.eval,
+              [recur(ast.right)]
+            );
+            if (newAstFromFunction) {
+              return newAstFromFunction;
+            }
+          }
+          throw new Error("Unknown unary operator: " + ast.operator);
+        }
+      }
     case "BinaryExpression":
       switch (ast.operator) {
         case "&&":
@@ -98,8 +174,20 @@ export function estreeFromJexlAst(
             [b.binaryExpression("/", recur(ast.left), recur(ast.right))]
           );
         default:
+          // Find custom binary operators in the grammar
+          {
+            const binaryOperator = grammar.elements[ast.operator];
+            if (binaryOperator?.type === "binaryOp" && binaryOperator.eval) {
+              const newAstFromFunction = createExpressionFromFunction(
+                binaryOperator.eval,
+                [recur(ast.left), recur(ast.right)]
+              );
+              if (newAstFromFunction) {
+                return newAstFromFunction;
+              }
+            }
+          }
           throw new Error("Unknown binary operator: " + ast.operator);
-        // TODO: Look for other operators in the grammar?
       }
     case "ConditionalExpression":
       return b.conditionalExpression(
@@ -171,78 +259,24 @@ export function estreeFromJexlAst(
       }
 
       // Check Jexl custom functions/transforms for an implementation
-      if (options.functionParser) {
-        let functionBodyAst: namedTypes.Statement | undefined = (() => {
-          switch (ast.pool) {
-            case "transforms":
-              {
-                const transform = grammar.transforms[ast.name];
-                if (transform) {
-                  return options.functionParser(transform.toString()).program
-                    .body;
-                }
-              }
-              break;
-            case "functions":
-              {
-                const func = grammar.functions[ast.name];
-                if (func) {
-                  return options.functionParser(func.toString()).program.body;
-                }
-              }
-              break;
-          }
-        })()?.[0];
-
-        if (functionBodyAst) {
-          // If the function body is an expression statement, unwrap it
-          if (namedTypes.ExpressionStatement.check(functionBodyAst)) {
-            functionBodyAst = functionBodyAst.expression;
-          }
-
-          if (
-            namedTypes.ArrowFunctionExpression.check(functionBodyAst) ||
-            namedTypes.FunctionDeclaration.check(functionBodyAst)
-          ) {
-            const functionParams = functionBodyAst.params;
-            const functionBody = functionBodyAst.body;
-
-            // Replace occurrences of the parameter in the function body
-            // with the corresponding argument
-            for (let i = 0; i < functionParams.length; i++) {
-              const functionParam = functionParams[i];
-              if (namedTypes.Identifier.check(functionParam)) {
-                visit(functionBody, {
-                  visitIdentifier(path) {
-                    if (path.node.name === functionParam.name) {
-                      return recur(ast.args[i]);
-                    }
-                    this.traverse(path);
-                  },
-                });
-              }
-            }
-
-            if (namedTypes.BlockStatement.check(functionBody)) {
-              // If the function is just a return statement, unwrap it
-              if (functionBody.body.length === 1) {
-                const expression = functionBody.body[0];
-                if (namedTypes.ReturnStatement.check(expression)) {
-                  return expression.argument!;
-                }
-              }
-              // Otherwise, wrap the statements in an arrow function
-              return b.callExpression(
-                b.arrowFunctionExpression([], functionBody),
-                []
-              );
-            }
-
-            return functionBody;
-          }
+      const newAstFromFunction = (() => {
+        switch (ast.pool) {
+          case "transforms":
+            return createExpressionFromFunction(
+              grammar.transforms[ast.name],
+              ast.args.map(recur)
+            );
+          case "functions":
+            return createExpressionFromFunction(
+              grammar.functions[ast.name],
+              ast.args.map(recur)
+            );
         }
-      }
+      })();
 
-      return b.callExpression(b.identifier(ast.name), ast.args.map(recur));
+      return (
+        newAstFromFunction ??
+        b.callExpression(b.identifier(ast.name), ast.args.map(recur))
+      );
   }
 }
