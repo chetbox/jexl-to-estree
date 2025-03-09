@@ -2,6 +2,21 @@ import { Jexl } from "jexl";
 import * as recast from "recast";
 import { describe, expect, test } from "vitest";
 import { estreeFromJexlAst } from "..";
+import { builders as b } from "ast-types";
+
+const jexl = new Jexl();
+jexl.addTransforms({
+  length: (val) => val.length,
+  some: (values, matchValue) => values.some((v) => v === matchValue),
+  every: function every(values, matchValue) {
+    return values.every((v) => v === matchValue);
+  },
+});
+jexl.addFunction("now", () => Date.now());
+jexl.addFunction("print", (value) => {
+  console.log(value);
+  return true;
+});
 
 describe("estreeFromJexlAst", () => {
   // Create a Jexl AST from an expression and then convert back to an expression and see if it looks right
@@ -52,14 +67,42 @@ describe("estreeFromJexlAst", () => {
     ["a < b | c", "a < c(b)"],
     ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
     ["a | b < c ? true : false", "b(a) < c ? true : false"],
+    ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
+    ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
+    ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
+    ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
+    ["dateString() | prefix('Date: ')", '"Date: " + new Date().toString()'], // uses custom function and transform handler
+    ["dateString(1234567890)", "new Date(1234567890).toString()"], // uses custom function with argument
+    [
+      "print(foo) && bar",
+      "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
+    ], // uses `print` function block inline
   ];
 
   test.each(expressions)("`%s`", (input, expected) => {
-    const jexl = new Jexl();
     const compiledExpression = jexl.compile(input);
     const estreeAst = estreeFromJexlAst(
       jexl._grammar,
-      compiledExpression._getAst()
+      compiledExpression._getAst(),
+      {
+        functionParser: recast.parse,
+        translateTransforms: {
+          /** `arg + value` */
+          prefix: (astValue, astArg1) =>
+            b.binaryExpression("+", astArg1, astValue),
+        },
+        translateFunctions: {
+          /** `new Date(...args).toString()` */
+          dateString: (...astArgs) =>
+            b.callExpression(
+              b.memberExpression(
+                b.newExpression(b.identifier("Date"), astArgs),
+                b.identifier("toString")
+              ),
+              []
+            ),
+        },
+      }
     );
     const newExpression = recast.print(estreeAst, { tabWidth: 2 }).code;
     expect(newExpression).toBe(expected ?? input);

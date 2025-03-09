@@ -1,0 +1,11 @@
+diff --git a/node_modules/@types/jexl/Grammar.d.ts b/node_modules/@types/jexl/Grammar.d.ts
+index 144396e..cdd6c61 100644
+--- a/node_modules/@types/jexl/Grammar.d.ts
++++ b/node_modules/@types/jexl/Grammar.d.ts
+@@ -20,5 +20,5 @@ export type Element =
+ export default interface Grammar {
+     elements: { [symbol: string]: Element };
+     functions: { [name: string]: (...args: unknown[]) => unknown };
+-    transform: { [name: string]: (...args: [unknown, ...unknown[]]) => unknown };
++    transforms: { [name: string]: (...args: [unknown, ...unknown[]]) => unknown };
+ }

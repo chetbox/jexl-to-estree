@@ -1,15 +1,26 @@
 import JexlAst from "jexl/Ast";
-import JexlGrammar, { Element as JexlElement } from "jexl/Grammar";
-import { builders as b, ASTNode } from "ast-types";
+import JexlGrammar from "jexl/Grammar";
+import { namedTypes, builders as b, visit } from "ast-types";
 import { ExpressionKind } from "ast-types/gen/kinds";
 
 export function estreeFromJexlAst(
   grammar: JexlGrammar,
   ast: JexlAst,
+  options: {
+    functionParser?: (func: string) => namedTypes.File;
+    translateTransforms?: Record<
+      string,
+      (value: ExpressionKind, ...args: ExpressionKind[]) => ExpressionKind
+    >;
+    translateFunctions?: Record<
+      string,
+      (...args: ExpressionKind[]) => ExpressionKind
+    >;
+  } = {},
   ancestors: JexlAst[] = []
 ): ExpressionKind {
   const recur = (childAst: JexlAst) =>
-    estreeFromJexlAst(grammar, childAst, [...ancestors, ast]);
+    estreeFromJexlAst(grammar, childAst, options, [...ancestors, ast]);
 
   switch (ast.type) {
     case "Literal":
@@ -136,6 +147,102 @@ export function estreeFromJexlAst(
         }
       }
     case "FunctionCall":
+      // Check for overrides for functions/transform implementations
+      switch (ast.pool) {
+        case "transforms":
+          {
+            const translate = options.translateTransforms?.[ast.name];
+            if (translate) {
+              return translate(
+                recur(ast.args[0]),
+                ...ast.args.slice(1).map(recur)
+              );
+            }
+          }
+          break;
+        case "functions":
+          {
+            const translate = options.translateFunctions?.[ast.name];
+            if (translate) {
+              return translate(...ast.args.map(recur));
+            }
+          }
+          break;
+      }
+
+      // Check Jexl custom functions/transforms for an implementation
+      if (options.functionParser) {
+        let functionBodyAst: namedTypes.Statement | undefined = (() => {
+          switch (ast.pool) {
+            case "transforms":
+              {
+                const transform = grammar.transforms[ast.name];
+                if (transform) {
+                  return options.functionParser(transform.toString()).program
+                    .body;
+                }
+              }
+              break;
+            case "functions":
+              {
+                const func = grammar.functions[ast.name];
+                if (func) {
+                  return options.functionParser(func.toString()).program.body;
+                }
+              }
+              break;
+          }
+        })()?.[0];
+
+        if (functionBodyAst) {
+          // If the function body is an expression statement, unwrap it
+          if (namedTypes.ExpressionStatement.check(functionBodyAst)) {
+            functionBodyAst = functionBodyAst.expression;
+          }
+
+          if (
+            namedTypes.ArrowFunctionExpression.check(functionBodyAst) ||
+            namedTypes.FunctionDeclaration.check(functionBodyAst)
+          ) {
+            const functionParams = functionBodyAst.params;
+            const functionBody = functionBodyAst.body;
+
+            // Replace occurrences of the parameter in the function body
+            // with the corresponding argument
+            for (let i = 0; i < functionParams.length; i++) {
+              const functionParam = functionParams[i];
+              if (namedTypes.Identifier.check(functionParam)) {
+                visit(functionBody, {
+                  visitIdentifier(path) {
+                    if (path.node.name === functionParam.name) {
+                      return recur(ast.args[i]);
+                    }
+                    this.traverse(path);
+                  },
+                });
+              }
+            }
+
+            if (namedTypes.BlockStatement.check(functionBody)) {
+              // If the function is just a return statement, unwrap it
+              if (functionBody.body.length === 1) {
+                const expression = functionBody.body[0];
+                if (namedTypes.ReturnStatement.check(expression)) {
+                  return expression.argument!;
+                }
+              }
+              // Otherwise, wrap the statements in an arrow function
+              return b.callExpression(
+                b.arrowFunctionExpression([], functionBody),
+                []
+              );
+            }
+
+            return functionBody;
+          }
+        }
+      }
+
       return b.callExpression(b.identifier(ast.name), ast.args.map(recur));
   }
 }
