@@ -1,16 +1,31 @@
+import type { Jexl } from "jexl";
 import JexlAst from "jexl/Ast";
 import JexlGrammar from "jexl/Grammar";
 import { namedTypes, builders as b, visit } from "ast-types";
 import { ExpressionKind } from "ast-types/gen/kinds";
 
+export interface EstreeFromJexlAstOptions {
+  functionParser?: (func: string) => namedTypes.File;
+  translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
+  translateFunctions?: Record<string, (...args: any[]) => any>;
+}
+
+export function estreeFromJexlString(
+  jexl: InstanceType<typeof Jexl>,
+  jexlSource: string,
+  options?: EstreeFromJexlAstOptions
+) {
+  return estreeFromJexlAst(
+    jexl._grammar,
+    jexl.compile(jexlSource)._getAst(),
+    options
+  );
+}
+
 export function estreeFromJexlAst(
   grammar: JexlGrammar,
   ast: JexlAst,
-  options: {
-    functionParser?: (func: string) => namedTypes.File;
-    translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
-    translateFunctions?: Record<string, (...args: any[]) => any>;
-  } = {},
+  options: EstreeFromJexlAstOptions = {},
   ancestors: JexlAst[] = []
 ): ExpressionKind {
   const recur = (childAst: JexlAst) =>
@@ -237,14 +252,12 @@ export function estreeFromJexlAst(
       const newAstFromFunction = (() => {
         switch (ast.pool) {
           case "transforms":
-            console.log("transform", ast.name);
             return createExpressionFromFunction(
               options.translateTransforms?.[ast.name] ??
                 grammar.transforms[ast.name],
               ast.args.map(recur)
             );
           case "functions":
-            console.log("function", ast.name);
             return createExpressionFromFunction(
               options.translateFunctions?.[ast.name] ??
                 grammar.functions[ast.name],
