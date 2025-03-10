@@ -8,14 +8,8 @@ export function estreeFromJexlAst(
   ast: JexlAst,
   options: {
     functionParser?: (func: string) => namedTypes.File;
-    translateTransforms?: Record<
-      string,
-      (value: ExpressionKind, ...args: ExpressionKind[]) => ExpressionKind
-    >;
-    translateFunctions?: Record<
-      string,
-      (...args: ExpressionKind[]) => ExpressionKind
-    >;
+    translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
+    translateFunctions?: Record<string, (...args: any[]) => any>;
   } = {},
   ancestors: JexlAst[] = []
 ): ExpressionKind {
@@ -54,7 +48,11 @@ export function estreeFromJexlAst(
             visit(functionBody, {
               visitIdentifier(path) {
                 if (path.node.name === functionParam.name) {
-                  return args[i];
+                  if (i < args.length) {
+                    return args[i];
+                  } else {
+                    return b.identifier("undefined");
+                  }
                 }
                 this.traverse(path);
               },
@@ -235,40 +233,21 @@ export function estreeFromJexlAst(
         }
       }
     case "FunctionCall":
-      // Check for overrides for functions/transform implementations
-      switch (ast.pool) {
-        case "transforms":
-          {
-            const translate = options.translateTransforms?.[ast.name];
-            if (translate) {
-              return translate(
-                recur(ast.args[0]),
-                ...ast.args.slice(1).map(recur)
-              );
-            }
-          }
-          break;
-        case "functions":
-          {
-            const translate = options.translateFunctions?.[ast.name];
-            if (translate) {
-              return translate(...ast.args.map(recur));
-            }
-          }
-          break;
-      }
-
-      // Check Jexl custom functions/transforms for an implementation
+      // Check for overrides, then Jexl grammar, for functions/transform implementations
       const newAstFromFunction = (() => {
         switch (ast.pool) {
           case "transforms":
+            console.log("transform", ast.name);
             return createExpressionFromFunction(
-              grammar.transforms[ast.name],
+              options.translateTransforms?.[ast.name] ??
+                grammar.transforms[ast.name],
               ast.args.map(recur)
             );
           case "functions":
+            console.log("function", ast.name);
             return createExpressionFromFunction(
-              grammar.functions[ast.name],
+              options.translateFunctions?.[ast.name] ??
+                grammar.functions[ast.name],
               ast.args.map(recur)
             );
         }

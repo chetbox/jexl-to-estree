@@ -65,21 +65,12 @@ jexl.addFunction("now", () => Date.now());
 
     // Custom output code for specific Jexl transforms
     translateTransforms: {
-      /** `arg + value` */
-      prefix: (astValue, astArg1) => b.binaryExpression("+", astArg1, astValue),
+      prefix: (value: string, arg: string) => arg + value,
     },
 
     // Custom output for specific Jexl function calls
     translateFunctions: {
-      /** `new Date(...args).toString()` */
-      dateString: (...astArgs) =>
-        b.callExpression(
-          b.memberExpression(
-            b.newExpression(b.identifier("Date"), astArgs),
-            b.identifier("toString")
-          ),
-          []
-        ),
+      dateString: (value) => new Date(value).toString(),
     },
   };
 

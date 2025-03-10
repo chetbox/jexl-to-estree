@@ -76,7 +76,11 @@ describe("estreeFromJexlAst", () => {
     ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
     ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
     ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
-    ["dateString() | prefix('Date: ')", '"Date: " + new Date().toString()'], // uses custom function and transform handler
+    [
+      "dateString(1234567890) | prefix('Date: ')",
+      '"Date: " + new Date(1234567890).toString()',
+    ], // uses custom function and transform handler
+    ["dateString()", "new Date(undefined).toString()"], // uses custom function handler, replacing the missing argument with `undefined`
     ["dateString(1234567890)", "new Date(1234567890).toString()"], // uses custom function with argument
     [
       "print(foo) && bar",
@@ -96,20 +100,10 @@ describe("estreeFromJexlAst", () => {
       {
         functionParser: recast.parse,
         translateTransforms: {
-          /** `arg + value` */
-          prefix: (astValue, astArg1) =>
-            b.binaryExpression("+", astArg1, astValue),
+          prefix: (value: string, arg: string) => arg + value,
         },
         translateFunctions: {
-          /** `new Date(...args).toString()` */
-          dateString: (...astArgs) =>
-            b.callExpression(
-              b.memberExpression(
-                b.newExpression(b.identifier("Date"), astArgs),
-                b.identifier("toString")
-              ),
-              []
-            ),
+          dateString: (value) => new Date(value).toString(),
         },
       }
     );
