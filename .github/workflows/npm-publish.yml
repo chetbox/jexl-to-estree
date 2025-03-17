@@ -15,6 +15,7 @@ jobs:
           node-version: "22"
           registry-url: https://registry.npmjs.org
       - run: yarn
+      - run: yarn prepare
       - run: yarn test
       - run: yarn build
       - run: yarn npm publish
