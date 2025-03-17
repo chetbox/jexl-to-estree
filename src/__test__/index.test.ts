@@ -99,7 +99,7 @@ const TEST_CASES: [string, string | null][] = [
 describe.each(TEST_CASES)("%s", (input, expected) => {
   test("estreeFromJexlString", () => {
     const estreeAst = estreeFromJexlString(jexl, input, {
-      functionParser: recast.parse,
+      functionParser: (source) => recast.parse(source).program,
       translateTransforms: TRANSLATE_TRANSFORMS,
       translateFunctions: TRANSLATE_FUNCTIONS,
     });
@@ -113,7 +113,7 @@ describe.each(TEST_CASES)("%s", (input, expected) => {
       jexl._grammar,
       compiledExpression._getAst(),
       {
-        functionParser: recast.parse,
+        functionParser: (source) => recast.parse(source).program,
         translateTransforms: TRANSLATE_TRANSFORMS,
         translateFunctions: TRANSLATE_FUNCTIONS,
       }

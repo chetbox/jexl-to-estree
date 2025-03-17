@@ -5,7 +5,7 @@ import { namedTypes, builders as b, visit } from "ast-types";
 import { ExpressionKind } from "ast-types/gen/kinds";
 
 export interface EstreeFromJexlAstOptions {
-  functionParser?: (func: string) => namedTypes.File;
+  functionParser?: (func: string) =>  namedTypes.Program;
   translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
   translateFunctions?: Record<string, (...args: any[]) => any>;
 }
@@ -40,7 +40,7 @@ export function estreeFromJexlAst(
     }
 
     let functionBodyAst: namedTypes.Statement | undefined =
-      options.functionParser?.(func.toString()).program.body[0];
+      options.functionParser?.(func.toString()).body[0];
 
     if (functionBodyAst) {
       // If the function body is an expression statement, unwrap it

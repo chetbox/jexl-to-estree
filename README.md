@@ -65,7 +65,7 @@ jexl.addFunction("now", () => Date.now());
 {
   const ast = estreeFromJexlString(jexl, "dateString() | prefix('Date: ')", {
     // Parse functions and transforms from the JEXL grammar
-    functionParser: recast.parse,
+    functionParser: (source) => recast.parse(source).program,
 
     // Custom output code for specific Jexl transforms
     translateTransforms: {
