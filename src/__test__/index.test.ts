@@ -61,6 +61,8 @@ const TEST_CASES: [string, string | null][] = [
     '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
     'Math.floor(1 / 2) * Math.pow((foo["bar"] - 4) % 6, foo.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3))',
   ],
+  ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
+  ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],
   ["a.b[e.f].c[g.h].d", null],
   ["a[c][d].b", null],
   ["(a ? b : c) + (d && (e || f))", null],

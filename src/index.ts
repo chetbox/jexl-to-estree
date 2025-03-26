@@ -153,7 +153,6 @@ export function estreeFromJexlAst(
         case "%":
         case "&":
         case "|":
-        case "in":
         case "instanceof":
         case "**":
           return b.binaryExpression(
@@ -185,6 +184,15 @@ export function estreeFromJexlAst(
               false
             ),
             [b.binaryExpression("/", recur(ast.left), recur(ast.right))]
+          );
+        case "in":
+          return b.callExpression(
+            b.memberExpression(
+              recur(ast.right),
+              b.identifier("includes"),
+              false
+            ),
+            [recur(ast.left)]
           );
         default:
           // Find custom binary operators in the grammar
