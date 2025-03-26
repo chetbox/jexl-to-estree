@@ -1,6 +1,6 @@
 {
   "name": "jexl-to-estree",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Convert a Jexl expression AST to an ESTree expression AST",
   "main": "dist/index.js",
   "files": [
