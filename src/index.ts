@@ -40,7 +40,7 @@ export function estreeFromJexlAst(
     }
 
     let functionBodyAst: namedTypes.Statement | undefined =
-      options.functionParser?.(func.toString()).body[0];
+      options.functionParser?.(func.toString()).body?.[0];
 
     if (functionBodyAst) {
       // If the function body is an expression statement, unwrap it
