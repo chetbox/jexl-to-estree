@@ -95,6 +95,10 @@ const TEST_CASES: [string, string | null][] = [
   ["~foo", "!!foo"], // custom unary operator
   ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
   ["5 .. 15", "new Array(15 - 5).fill(0).map((_, i) => 5 + i)"], // uses `..` custom binary operator
+  [
+    '[{ direction: "Right", clicks: 1}, { direction: "Left", clicks: 2 }]',
+    '[{\n  direction: "Right",\n  clicks: 1\n}, {\n  direction: "Left",\n  clicks: 2\n}]',
+  ], // array of objects
 ];
 
 describe.each(TEST_CASES)("%s", (input, expected) => {
