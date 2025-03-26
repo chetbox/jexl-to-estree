@@ -5,7 +5,7 @@ import { namedTypes, builders as b, visit } from "ast-types";
 import { ExpressionKind } from "ast-types/gen/kinds";
 
 export interface EstreeFromJexlAstOptions {
-  functionParser?: (func: string) =>  namedTypes.Program;
+  functionParser?: (func: string) => namedTypes.Program;
   translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
   translateFunctions?: Record<string, (...args: any[]) => any>;
 }
@@ -237,15 +237,8 @@ export function estreeFromJexlAst(
           ]
         );
       } else {
-        if (ast.expr.type === "Literal" || ast.expr.type === "Identifier") {
-          // We are just indexing into an object/array
-          return b.memberExpression(recur(ast.subject), recur(ast.expr), true);
-        } else {
-          return b.callExpression(
-            b.memberExpression(recur(ast.subject), b.identifier("filter")),
-            [b.arrowFunctionExpression([], recur(ast.expr))]
-          );
-        }
+        // We are just indexing into an object/array
+        return b.memberExpression(recur(ast.subject), recur(ast.expr), true);
       }
     case "FunctionCall":
       // Check for overrides, then Jexl grammar, for functions/transform implementations
