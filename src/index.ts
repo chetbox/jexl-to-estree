@@ -63,10 +63,24 @@ export function estreeFromJexlAst(
             visit(functionBody, {
               visitIdentifier(path) {
                 if (path.node.name === functionParam.name) {
-                  if (i < args.length) {
-                    return args[i];
+                  return args[i] ?? b.identifier("undefined");
+                }
+                this.traverse(path);
+              },
+            });
+
+            // Remove superfluous `undefined` arguments from function calls
+            visit(functionBody, {
+              visitCallExpression(path) {
+                for (let i = path.node.arguments.length - 1; i >= 0; i--) {
+                  const argumentNode = path.node.arguments[i];
+                  if (
+                    namedTypes.Identifier.check(argumentNode) &&
+                    argumentNode.name === "undefined"
+                  ) {
+                    path.node.arguments.splice(i, 1);
                   } else {
-                    return b.identifier("undefined");
+                    break;
                   }
                 }
                 this.traverse(path);

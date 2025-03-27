@@ -10,6 +10,7 @@ jexl.addTransforms({
   every: function every(values, matchValue) {
     return values.every((v) => v === matchValue);
   },
+  parseInt: (val: string, radix?: number) => parseInt(val, radix),
 });
 jexl.addFunction("now", () => Date.now());
 jexl.addFunction("print", (value) => {
@@ -82,6 +83,9 @@ const TEST_CASES: [string, string | null][] = [
   ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
   ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
   ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
+  ['"1234" | parseInt', 'parseInt("1234")'], // uses `parseInt` transform to convert expression with no argument
+  ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
+  ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
   ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
   [
     "dateString(1234567890) | prefix('Date: ')",
