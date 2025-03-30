@@ -102,6 +102,7 @@ const TEST_CASES: [string, string | null][] = [
   ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
   ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
   ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
+  ["x | toJSON(null, 2)", "JSON.stringify(x, null, 2)"], // uses `toJSON` transform with arguments
   ["(x.value / 1000) | floor", "Math.floor(x.value / 1000)"], // uses `floor` transform to convert expression
   ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
   [

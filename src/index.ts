@@ -67,7 +67,10 @@ export function estreeFromJexlAst(
         // Replace occurrences of the parameter in the function body with the corresponding argument.
         // This mutates `functionBody` which is wrapped by `functionBodyAsProgram`.
         traverse(functionBodyAsProgram, {
-          $: { scope: true },
+          $: {
+            scope: true,
+            validateNodes: false, // Prevents error: "null" is not a valid identifier
+          },
           Identifier(path) {
             // Check if the path is a reference
             if (!utils.isReference(path)) {
