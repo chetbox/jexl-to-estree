@@ -22,10 +22,10 @@ jexl.addTransforms({
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number
   ) => JSON.stringify(obj, replacer, space),
-  floor: (val: number) => Math.floor(val),
-  ceil: (val: number) => Math.ceil(val),
-  round: (val: number) => Math.round(val),
-  abs: (val: number) => Math.abs(val),
+  floor: (value: number) => Math.floor(value),
+  ceil: (value: number) => Math.ceil(value),
+  round: (value: number) => Math.round(value),
+  abs: (value: number) => Math.abs(value),
 });
 jexl.addFunction("now", () => Date.now());
 jexl.addFunction("print", (value) => {
@@ -102,7 +102,7 @@ const TEST_CASES: [string, string | null][] = [
   ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
   ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
   ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
-  ["(x.y.z / 1000) | floor", "Math.floor(x.y.z / 1000)"], // uses `floor` transform to convert expression
+  ["(x.value / 1000) | floor", "Math.floor(x.value / 1000)"], // uses `floor` transform to convert expression
   ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
   [
     "dateString(1234567890) | prefix('Date: ')",
