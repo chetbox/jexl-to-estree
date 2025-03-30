@@ -67,10 +67,7 @@ export function estreeFromJexlAst(
         // Replace occurrences of the parameter in the function body with the corresponding argument.
         // This mutates `functionBody` which is wrapped by `functionBodyAsProgram`.
         traverse(functionBodyAsProgram, {
-          $: {
-            scope: true,
-            validateNodes: false, // Allows the use of `b.identifier("undefined")` which seems to be not allowed when validated even though is it the standard way of representing `undefined
-          },
+          $: { scope: true },
           Identifier(path) {
             // Check if the path is a reference
             if (!utils.isReference(path)) {
@@ -90,7 +87,6 @@ export function estreeFromJexlAst(
 
         // Remove superfluous `undefined` arguments from function calls
         traverse(functionBody, {
-          $: { scope: true },
           CallExpression(path) {
             if (!path.node) {
               return;

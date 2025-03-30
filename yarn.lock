@@ -390,7 +390,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/estree@npm:*, @types/estree@npm:^1.0.5":
+"@types/estree@npm:*, @types/estree@npm:^1.0.7":
   version: 1.0.7
   resolution: "@types/estree@npm:1.0.7"
   checksum: 10c0/be815254316882f7c40847336cd484c3bc1c3e34f710d197160d455dc9d6d050ffbf4c3bc76585dba86f737f020ab20bdb137ebe0e9116b0c86c7c0342221b8c
@@ -958,13 +958,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"estree-toolkit@npm:^1.7.8":
-  version: 1.7.8
-  resolution: "estree-toolkit@npm:1.7.8"
+"estree-toolkit@npm:^1.7.9":
+  version: 1.7.9
+  resolution: "estree-toolkit@npm:1.7.9"
   dependencies:
-    "@types/estree": "npm:^1.0.5"
+    "@types/estree": "npm:^1.0.7"
     "@types/estree-jsx": "npm:^1.0.5"
-  checksum: 10c0/9a4e3437a04c96a92908a8795874e1beac9088b26ebd5d0552494348262c4a63fb7a07499fc86fa4c123f7387f9e277d302c100da0393b1f85962cbf470e4dc6
+  checksum: 10c0/6fb76aef88817e47dc5be918f6895a2168d385e022f1c66407671ad8455b9b67a7cf2eeb325b8d0fce128da335162a565e2bc1fe95119c3f4fc126f5e85215e6
   languageName: node
   linkType: hard
 
@@ -1319,7 +1319,7 @@ __metadata:
   dependencies:
     "@types/jexl": "npm:^2.3.4"
     acorn: "npm:^8.14.1"
-    estree-toolkit: "npm:^1.7.8"
+    estree-toolkit: "npm:^1.7.9"
     jexl: "npm:^2.3.0"
     patch-package: "npm:^8.0.0"
     recast: "npm:^0.23.11"
