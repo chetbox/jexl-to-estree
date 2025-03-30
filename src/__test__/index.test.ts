@@ -129,62 +129,41 @@ const recastPrintOptions = {
   arrowParensAlways: true,
 };
 
+const FUNCTION_PARSERS = {
+  recast: (source: string) => recast.parse(source).program,
+  acorn: (source: string) =>
+    acorn.parse(source, {
+      ecmaVersion: 2021,
+      sourceType: "script",
+    }) as types.Program,
+};
+
 describe.each(TEST_CASES)("%s", (input, expected) => {
-  describe("recast parser", () => {
-    const functionParser = (source: string) => recast.parse(source).program;
+  describe.each(Object.entries(FUNCTION_PARSERS))(
+    "%s parser",
+    (_parserName, functionParser) => {
+      const options = {
+        functionParser,
+        translateTransforms: TRANSLATE_TRANSFORMS,
+        translateFunctions: TRANSLATE_FUNCTIONS,
+      };
 
-    const options = {
-      functionParser,
-      translateTransforms: TRANSLATE_TRANSFORMS,
-      translateFunctions: TRANSLATE_FUNCTIONS,
-    };
+      test("estreeFromJexlString", () => {
+        const estreeAst = estreeFromJexlString(jexl, input, options);
+        const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+        expect(newExpression).toBe(expected ?? input);
+      });
 
-    test("estreeFromJexlString", () => {
-      const estreeAst = estreeFromJexlString(jexl, input, options);
-      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-      expect(newExpression).toBe(expected ?? input);
-    });
-
-    test("estreeFromJexlAst", () => {
-      const compiledExpression = jexl.compile(input);
-      const estreeAst = estreeFromJexlAst(
-        jexl._grammar,
-        compiledExpression._getAst(),
-        options
-      );
-      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-      expect(newExpression).toBe(expected ?? input);
-    });
-  });
-
-  describe("acorn parser", () => {
-    const functionParser = (source: string) =>
-      acorn.parse(source, {
-        ecmaVersion: 2021,
-        sourceType: "script",
-      }) as types.Program;
-
-    const options = {
-      functionParser,
-      translateTransforms: TRANSLATE_TRANSFORMS,
-      translateFunctions: TRANSLATE_FUNCTIONS,
-    };
-
-    test("estreeFromJexlString", () => {
-      const estreeAst = estreeFromJexlString(jexl, input, options);
-      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-      expect(newExpression).toBe(expected ?? input);
-    });
-
-    test("estreeFromJexlAst", () => {
-      const compiledExpression = jexl.compile(input);
-      const estreeAst = estreeFromJexlAst(
-        jexl._grammar,
-        compiledExpression._getAst(),
-        options
-      );
-      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-      expect(newExpression).toBe(expected ?? input);
-    });
-  });
+      test("estreeFromJexlAst", () => {
+        const compiledExpression = jexl.compile(input);
+        const estreeAst = estreeFromJexlAst(
+          jexl._grammar,
+          compiledExpression._getAst(),
+          options
+        );
+        const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+        expect(newExpression).toBe(expected ?? input);
+      });
+    }
+  );
 });
