@@ -381,6 +381,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/estree-jsx@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "@types/estree-jsx@npm:1.0.5"
+  dependencies:
+    "@types/estree": "npm:*"
+  checksum: 10c0/07b354331516428b27a3ab99ee397547d47eb223c34053b48f84872fafb841770834b90cc1a0068398e7c7ccb15ec51ab00ec64b31dc5e3dbefd624638a35c6d
+  languageName: node
+  linkType: hard
+
+"@types/estree@npm:*, @types/estree@npm:^1.0.5":
+  version: 1.0.7
+  resolution: "@types/estree@npm:1.0.7"
+  checksum: 10c0/be815254316882f7c40847336cd484c3bc1c3e34f710d197160d455dc9d6d050ffbf4c3bc76585dba86f737f020ab20bdb137ebe0e9116b0c86c7c0342221b8c
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:1.0.6, @types/estree@npm:^1.0.0":
   version: 1.0.6
   resolution: "@types/estree@npm:1.0.6"
@@ -540,15 +556,6 @@ __metadata:
   version: 2.0.1
   resolution: "assertion-error@npm:2.0.1"
   checksum: 10c0/bbbcb117ac6480138f8c93cf7f535614282dea9dc828f540cdece85e3c665e8f78958b96afac52f29ff883c72638e6a87d469ecc9fe5bc902df03ed24a55dba8
-  languageName: node
-  linkType: hard
-
-"ast-types@npm:^0.14.2":
-  version: 0.14.2
-  resolution: "ast-types@npm:0.14.2"
-  dependencies:
-    tslib: "npm:^2.0.1"
-  checksum: 10c0/5d66d89b6c07fe092087454b6042dbaf81f2882b176db93861e2b986aafe0bce49e1f1ff59aac775d451c1426ad1e967d250e9e3548f5166ea8a3475e66c169d
   languageName: node
   linkType: hard
 
@@ -951,6 +958,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"estree-toolkit@npm:^1.7.8":
+  version: 1.7.8
+  resolution: "estree-toolkit@npm:1.7.8"
+  dependencies:
+    "@types/estree": "npm:^1.0.5"
+    "@types/estree-jsx": "npm:^1.0.5"
+  checksum: 10c0/9a4e3437a04c96a92908a8795874e1beac9088b26ebd5d0552494348262c4a63fb7a07499fc86fa4c123f7387f9e277d302c100da0393b1f85962cbf470e4dc6
+  languageName: node
+  linkType: hard
+
 "estree-walker@npm:^3.0.3":
   version: 3.0.3
   resolution: "estree-walker@npm:3.0.3"
@@ -1302,7 +1319,7 @@ __metadata:
   dependencies:
     "@types/jexl": "npm:^2.3.4"
     acorn: "npm:^8.14.1"
-    ast-types: "npm:^0.14.2"
+    estree-toolkit: "npm:^1.7.8"
     jexl: "npm:^2.3.0"
     patch-package: "npm:^8.0.0"
     recast: "npm:^0.23.11"

@@ -26,6 +26,6 @@
   },
   "packageManager": "yarn@4.7.0",
   "dependencies": {
-    "ast-types": "^0.14.2"
+    "estree-toolkit": "^1.7.8"
   }
 }

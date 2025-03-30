@@ -2,8 +2,8 @@ import { Jexl } from "jexl";
 import * as recast from "recast";
 import { describe, expect, test } from "vitest";
 import { estreeFromJexlAst, estreeFromJexlString } from "..";
-import { namedTypes } from "ast-types";
 import * as acorn from "acorn";
+import { types } from "estree-toolkit";
 
 const jexl = new Jexl();
 jexl.addTransforms({
@@ -162,7 +162,7 @@ describe.each(TEST_CASES)("%s", (input, expected) => {
       acorn.parse(source, {
         ecmaVersion: 2021,
         sourceType: "script",
-      }) as namedTypes.Program; // ast-types and Acorn's types don't quite match up so we cast here
+      }) as types.Program;
 
     const options = {
       functionParser,

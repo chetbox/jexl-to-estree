@@ -1,11 +1,10 @@
 import type { Jexl } from "jexl";
 import JexlAst from "jexl/Ast";
 import JexlGrammar from "jexl/Grammar";
-import { namedTypes, builders as b, visit } from "ast-types";
-import { ExpressionKind } from "ast-types/gen/kinds";
+import { traverse, builders as b, is, types, utils } from "estree-toolkit";
 
 export interface EstreeFromJexlAstOptions {
-  functionParser?: (func: string) => namedTypes.Program;
+  functionParser?: (func: string) => types.Program;
   translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
   translateFunctions?: Record<string, (...args: any[]) => any>;
 }
@@ -27,73 +26,88 @@ export function estreeFromJexlAst(
   ast: JexlAst,
   options: EstreeFromJexlAstOptions = {},
   ancestors: JexlAst[] = []
-): ExpressionKind {
+): types.Expression {
   const recur = (childAst: JexlAst) =>
     estreeFromJexlAst(grammar, childAst, options, [...ancestors, ast]);
 
   const createExpressionFromFunction = (
     func: Function | undefined,
-    args: ExpressionKind[]
+    args: types.Expression[]
   ) => {
     if (!func) {
       return undefined;
     }
 
-    let functionBodyAst: namedTypes.Statement | undefined =
-      options.functionParser?.(func.toString()).body?.[0];
+    let functionBodyAst:
+      | types.Statement
+      | types.ModuleDeclaration
+      | types.Expression
+      | undefined = options.functionParser?.(func.toString()).body?.[0];
 
     if (functionBodyAst) {
       // If the function body is an expression statement, unwrap it
-      if (namedTypes.ExpressionStatement.check(functionBodyAst)) {
+      if (is.expressionStatement(functionBodyAst)) {
         functionBodyAst = functionBodyAst.expression;
       }
 
       if (
-        namedTypes.ArrowFunctionExpression.check(functionBodyAst) ||
-        namedTypes.FunctionDeclaration.check(functionBodyAst)
+        is.arrowFunctionExpression(functionBodyAst) ||
+        is.functionDeclaration(functionBodyAst)
       ) {
         const functionParams = functionBodyAst.params;
         const functionBody = functionBodyAst.body;
 
         // Replace occurrences of the parameter in the function body
         // with the corresponding argument
-        for (let i = 0; i < functionParams.length; i++) {
-          const functionParam = functionParams[i];
-          if (namedTypes.Identifier.check(functionParam)) {
-            visit(functionBody, {
-              visitIdentifier(path) {
-                if (path.node.name === functionParam.name) {
-                  return args[i] ?? b.identifier("undefined");
-                }
-                this.traverse(path);
-              },
-            });
+        traverse(functionBody, {
+          $: {
+            scope: true,
+            validateNodes: false, // Allows the use of `b.identifier("undefined")` which seems to be not allowed when validated even though is it the standard way of representing `undefined
+          },
+          Identifier(path) {
+            // TODO: Check if the path is a reference - I think we need to wrap `functionBody` in a program node
+            // if (!utils.isReference(path)) {
+            //   return;
+            // }
 
-            // Remove superfluous `undefined` arguments from function calls
-            visit(functionBody, {
-              visitCallExpression(path) {
-                for (let i = path.node.arguments.length - 1; i >= 0; i--) {
-                  const argumentNode = path.node.arguments[i];
-                  if (
-                    namedTypes.Identifier.check(argumentNode) &&
-                    argumentNode.name === "undefined"
-                  ) {
-                    path.node.arguments.splice(i, 1);
-                  } else {
-                    break;
-                  }
-                }
-                this.traverse(path);
-              },
-            });
-          }
-        }
+            const functionParamIndex = functionParams.findIndex(
+              (param) => is.identifier(param) && param.name === path.node?.name
+            );
+            if (functionParamIndex >= 0) {
+              path.replaceWith(
+                args[functionParamIndex] ?? b.identifier("undefined")
+              );
+            }
+          },
+        });
 
-        if (namedTypes.BlockStatement.check(functionBody)) {
+        // Remove superfluous `undefined` arguments from function calls
+        traverse(functionBody, {
+          $: { scope: true },
+          CallExpression(path) {
+            if (!path.node) {
+              return;
+            }
+
+            for (let i = path.node.arguments.length - 1; i >= 0; i--) {
+              const argumentNode = path.node.arguments[i];
+              if (
+                is.identifier(argumentNode) &&
+                argumentNode.name === "undefined"
+              ) {
+                path.node.arguments.splice(i, 1);
+              } else {
+                break;
+              }
+            }
+          },
+        });
+
+        if (is.blockStatement(functionBody)) {
           // If the function is just a return statement, unwrap it
           if (functionBody.body.length === 1) {
             const expression = functionBody.body[0];
-            if (namedTypes.ReturnStatement.check(expression)) {
+            if (is.returnStatement(expression)) {
               return expression.argument!;
             }
           }
@@ -235,26 +249,27 @@ export function estreeFromJexlAst(
     case "ObjectLiteral":
       return b.objectExpression(
         Object.entries(ast.value).map(([key, value]) =>
-          b.objectProperty(b.identifier(key), recur(value))
+          b.property("init", b.identifier(key), recur(value), false, false)
         )
       );
     case "FilterExpression":
       if (ast.relative) {
+        // Extract all properties used to index into the object
         return b.callExpression(
           b.memberExpression(recur(ast.subject), b.identifier("filter")),
           [
             b.arrowFunctionExpression(
-              // TODO: extract all properties used to index into the object
-              [
+              findAllRelativeIdentifiers(ast.expr).map((name) =>
                 b.objectPattern([
-                  b.property.from({
-                    kind: "init",
-                    key: b.identifier("x"),
-                    value: b.identifier("x"),
-                    shorthand: true,
-                  }),
-                ]),
-              ],
+                  b.property(
+                    "init",
+                    b.identifier(name),
+                    b.identifier(name),
+                    false, // computed
+                    true // shorthand
+                  ) as types.ObjectPattern["properties"][number], // estree-toolkit types don't seem to accept "property" as a child of "objectPattern" even though it is valid
+                ])
+              ),
               recur(ast.expr)
             ),
           ]
@@ -287,4 +302,51 @@ export function estreeFromJexlAst(
         b.callExpression(b.identifier(ast.name), ast.args.map(recur))
       );
   }
+}
+
+function findAllRelativeIdentifiers(
+  ast: JexlAst,
+  foundIdentifiers: string[] = []
+): string[] {
+  switch (ast.type) {
+    case "Literal":
+      break;
+    case "Identifier":
+      if (ast.relative) {
+        foundIdentifiers.push(ast.value);
+      }
+      break;
+    case "ArrayLiteral":
+      for (const value of ast.value) {
+        findAllRelativeIdentifiers(value, foundIdentifiers);
+      }
+      break;
+    case "ObjectLiteral":
+      for (const value of Object.values(ast.value)) {
+        findAllRelativeIdentifiers(value, foundIdentifiers);
+      }
+      break;
+    case "FilterExpression":
+      findAllRelativeIdentifiers(ast.subject, foundIdentifiers);
+      findAllRelativeIdentifiers(ast.expr, foundIdentifiers);
+      break;
+    case "UnaryExpression":
+      findAllRelativeIdentifiers(ast.right, foundIdentifiers);
+      break;
+    case "BinaryExpression":
+      findAllRelativeIdentifiers(ast.left, foundIdentifiers);
+      findAllRelativeIdentifiers(ast.right, foundIdentifiers);
+      break;
+    case "ConditionalExpression":
+      findAllRelativeIdentifiers(ast.test, foundIdentifiers);
+      findAllRelativeIdentifiers(ast.consequent, foundIdentifiers);
+      findAllRelativeIdentifiers(ast.alternate, foundIdentifiers);
+      break;
+    case "FunctionCall":
+      for (const arg of ast.args) {
+        findAllRelativeIdentifiers(arg, foundIdentifiers);
+      }
+      break;
+  }
+  return foundIdentifiers;
 }
