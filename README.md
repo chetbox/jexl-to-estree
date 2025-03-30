@@ -28,6 +28,8 @@ const jexl = new Jexl();
 jexl.addTransforms({
   length: (val) => val.length,
   some: (values, matchValue) => values.some((v) => v === matchValue),
+  fromJSON: (jsonString, reviver) => JSON.parse(jsonString, reviver),
+  toJSON: (obj, replacer, space) => JSON.stringify(obj, replacer, space),
 });
 jexl.addFunction("now", () => Date.now());
 
@@ -45,7 +47,13 @@ jexl.addFunction("now", () => Date.now());
   recast.print(ast).code; // "Math.pow(foo.bar, 2) === 16"
 }
 
-// Transforms are automatically converted from `addTransforms`
+// Transforms are automatically converted from the source code of `addTransforms`.
+// Note that direct references to functions are not supported because the source code from `.toString()`
+// is used as the implementations of the transforms.
+{
+  const ast = estreeFromJexlString(jexl, "[1,2,3] | length");
+  recast.print(ast).code; // "[1, 2, 3].length"
+}
 {
   const ast = estreeFromJexlString(jexl, "[1,2,3] | length");
   recast.print(ast).code; // "[1, 2, 3].length"
@@ -55,7 +63,9 @@ jexl.addFunction("now", () => Date.now());
   recast.print(ast).code; // "[1, 2, 3].some((v) => v === 1)"
 }
 
-// Functions are automatically converted from `addFunction`
+// Functions are automatically converted from the source code of `addFunction`.
+// Note that direct references to functions are not supported because the source code from `.toString()`
+// is used as the implementations of the functions.
 {
   const ast = estreeFromJexlString(jexl, "now() + 1000");
   recast.print(ast).code; // "Date.now() + 1000"
