@@ -57,18 +57,25 @@ export function estreeFromJexlAst(
         const functionParams = functionBodyAst.params;
         const functionBody = functionBodyAst.body;
 
-        // Replace occurrences of the parameter in the function body
-        // with the corresponding argument
-        traverse(functionBody, {
+        // Wrap the function body in a `Program` so we can track variable scope when traversing below
+        const functionBodyAsProgram = b.program([
+          is.blockStatement(functionBody)
+            ? functionBody
+            : b.expressionStatement(functionBody),
+        ]);
+
+        // Replace occurrences of the parameter in the function body with the corresponding argument.
+        // This mutates `functionBody` which is wrapped by `functionBodyAsProgram`.
+        traverse(functionBodyAsProgram, {
           $: {
             scope: true,
             validateNodes: false, // Allows the use of `b.identifier("undefined")` which seems to be not allowed when validated even though is it the standard way of representing `undefined
           },
           Identifier(path) {
-            // TODO: Check if the path is a reference - I think we need to wrap `functionBody` in a program node
-            // if (!utils.isReference(path)) {
-            //   return;
-            // }
+            // Check if the path is a reference
+            if (!utils.isReference(path)) {
+              return;
+            }
 
             const functionParamIndex = functionParams.findIndex(
               (param) => is.identifier(param) && param.name === path.node?.name
