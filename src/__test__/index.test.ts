@@ -2,6 +2,8 @@ import { Jexl } from "jexl";
 import * as recast from "recast";
 import { describe, expect, test } from "vitest";
 import { estreeFromJexlAst, estreeFromJexlString } from "..";
+import { namedTypes } from "ast-types";
+import * as acorn from "acorn";
 
 const jexl = new Jexl();
 jexl.addTransforms({
@@ -20,6 +22,10 @@ jexl.addTransforms({
     replacer?: (this: any, key: string, value: any) => any,
     space?: string | number
   ) => JSON.stringify(obj, replacer, space),
+  floor: (val: number) => Math.floor(val),
+  ceil: (val: number) => Math.ceil(val),
+  round: (val: number) => Math.round(val),
+  abs: (val: number) => Math.abs(val),
 });
 jexl.addFunction("now", () => Date.now());
 jexl.addFunction("print", (value) => {
@@ -96,6 +102,7 @@ const TEST_CASES: [string, string | null][] = [
   ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
   ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
   ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
+  ["(x.y.z / 1000) | floor", "Math.floor(x.y.z / 1000)"], // uses `floor` transform to convert expression
   ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
   [
     "dateString(1234567890) | prefix('Date: ')",
@@ -117,29 +124,67 @@ const TEST_CASES: [string, string | null][] = [
   ], // array of objects
 ];
 
+const recastPrintOptions = {
+  tabWidth: 2,
+  arrowParensAlways: true,
+};
+
 describe.each(TEST_CASES)("%s", (input, expected) => {
-  test("estreeFromJexlString", () => {
-    const estreeAst = estreeFromJexlString(jexl, input, {
-      functionParser: (source) => recast.parse(source).program,
+  describe("recast parser", () => {
+    const functionParser = (source: string) => recast.parse(source).program;
+
+    const options = {
+      functionParser,
       translateTransforms: TRANSLATE_TRANSFORMS,
       translateFunctions: TRANSLATE_FUNCTIONS,
+    };
+
+    test("estreeFromJexlString", () => {
+      const estreeAst = estreeFromJexlString(jexl, input, options);
+      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+      expect(newExpression).toBe(expected ?? input);
     });
-    const newExpression = recast.print(estreeAst, { tabWidth: 2 }).code;
-    expect(newExpression).toBe(expected ?? input);
+
+    test("estreeFromJexlAst", () => {
+      const compiledExpression = jexl.compile(input);
+      const estreeAst = estreeFromJexlAst(
+        jexl._grammar,
+        compiledExpression._getAst(),
+        options
+      );
+      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+      expect(newExpression).toBe(expected ?? input);
+    });
   });
 
-  test("estreeFromJexlAst", () => {
-    const compiledExpression = jexl.compile(input);
-    const estreeAst = estreeFromJexlAst(
-      jexl._grammar,
-      compiledExpression._getAst(),
-      {
-        functionParser: (source) => recast.parse(source).program,
-        translateTransforms: TRANSLATE_TRANSFORMS,
-        translateFunctions: TRANSLATE_FUNCTIONS,
-      }
-    );
-    const newExpression = recast.print(estreeAst, { tabWidth: 2 }).code;
-    expect(newExpression).toBe(expected ?? input);
+  describe("acorn parser", () => {
+    const functionParser = (source: string) =>
+      acorn.parse(source, {
+        ecmaVersion: 2021,
+        sourceType: "script",
+      }) as namedTypes.Program; // ast-types and Acorn's types don't quite match up so we cast here
+
+    const options = {
+      functionParser,
+      translateTransforms: TRANSLATE_TRANSFORMS,
+      translateFunctions: TRANSLATE_FUNCTIONS,
+    };
+
+    test("estreeFromJexlString", () => {
+      const estreeAst = estreeFromJexlString(jexl, input, options);
+      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+      expect(newExpression).toBe(expected ?? input);
+    });
+
+    test("estreeFromJexlAst", () => {
+      const compiledExpression = jexl.compile(input);
+      const estreeAst = estreeFromJexlAst(
+        jexl._grammar,
+        compiledExpression._getAst(),
+        options
+      );
+      const newExpression = recast.print(estreeAst, recastPrintOptions).code;
+      expect(newExpression).toBe(expected ?? input);
+    });
   });
 });

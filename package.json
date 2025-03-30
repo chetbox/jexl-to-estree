@@ -12,6 +12,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/jexl": "^2.3.4",
+    "acorn": "^8.14.1",
     "jexl": "^2.3.0",
     "patch-package": "^8.0.0",
     "recast": "^0.23.11",
