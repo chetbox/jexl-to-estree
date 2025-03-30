@@ -244,12 +244,13 @@ export function estreeFromJexlAst(
           b.memberExpression(recur(ast.subject), b.identifier("filter")),
           [
             b.arrowFunctionExpression(
+              // TODO: extract all properties used to index into the object
               [
                 b.objectPattern([
                   b.property.from({
                     kind: "init",
-                    key: b.identifier("bar"),
-                    value: b.identifier("bar"),
+                    key: b.identifier("x"),
+                    value: b.identifier("x"),
                     shorthand: true,
                   }),
                 ]),
