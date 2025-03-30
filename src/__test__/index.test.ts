@@ -124,11 +124,6 @@ const TEST_CASES: [string, string | null][] = [
   ], // array of objects
 ];
 
-const recastPrintOptions = {
-  tabWidth: 2,
-  arrowParensAlways: true,
-};
-
 const FUNCTION_PARSERS = {
   recast: (source: string) => recast.parse(source).program,
   acorn: (source: string) =>
@@ -138,32 +133,45 @@ const FUNCTION_PARSERS = {
     }) as types.Program,
 };
 
+const ECMASCRIPT_SERIALIZERS = {
+  recast: (ast: types.Node) =>
+    recast.print(ast, {
+      tabWidth: 2,
+      arrowParensAlways: true,
+    }).code,
+};
+
 describe.each(TEST_CASES)("%s", (input, expected) => {
   describe.each(Object.entries(FUNCTION_PARSERS))(
     "%s parser",
     (_parserName, functionParser) => {
-      const options = {
-        functionParser,
-        translateTransforms: TRANSLATE_TRANSFORMS,
-        translateFunctions: TRANSLATE_FUNCTIONS,
-      };
+      describe.each(Object.entries(ECMASCRIPT_SERIALIZERS))(
+        "%s serializer",
+        (_serializerName, serializeToString) => {
+          const options = {
+            functionParser,
+            translateTransforms: TRANSLATE_TRANSFORMS,
+            translateFunctions: TRANSLATE_FUNCTIONS,
+          };
 
-      test("estreeFromJexlString", () => {
-        const estreeAst = estreeFromJexlString(jexl, input, options);
-        const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-        expect(newExpression).toBe(expected ?? input);
-      });
+          test("estreeFromJexlString", () => {
+            const estreeAst = estreeFromJexlString(jexl, input, options);
+            const newExpression = serializeToString(estreeAst);
+            expect(newExpression).toBe(expected ?? input);
+          });
 
-      test("estreeFromJexlAst", () => {
-        const compiledExpression = jexl.compile(input);
-        const estreeAst = estreeFromJexlAst(
-          jexl._grammar,
-          compiledExpression._getAst(),
-          options
-        );
-        const newExpression = recast.print(estreeAst, recastPrintOptions).code;
-        expect(newExpression).toBe(expected ?? input);
-      });
+          test("estreeFromJexlAst", () => {
+            const compiledExpression = jexl.compile(input);
+            const estreeAst = estreeFromJexlAst(
+              jexl._grammar,
+              compiledExpression._getAst(),
+              options
+            );
+            const newExpression = serializeToString(estreeAst);
+            expect(newExpression).toBe(expected ?? input);
+          });
+        }
+      );
     }
   );
 });
