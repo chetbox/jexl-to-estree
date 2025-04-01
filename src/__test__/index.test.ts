@@ -95,6 +95,8 @@ const TEST_CASES: [string, string | null][] = [
   ["a < b | c", "a < c(b)"],
   ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
   ["a | b < c ? true : false", "b(a) < c ? true : false"],
+
+  // Transforms
   ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
   ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
   ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
@@ -104,7 +106,9 @@ const TEST_CASES: [string, string | null][] = [
   ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
   ["x | toJSON(null, 2)", "JSON.stringify(x, null, 2)"], // uses `toJSON` transform with arguments
   ["(x.value / 1000) | floor", "Math.floor(x.value / 1000)"], // uses `floor` transform to convert expression
-  ["now() + 1000", "Date.now() + 1000"], // uses `now` expression to convert expression
+
+  // Functions
+  ["now() + 1000", "Date.now() + 1000"], // uses `now` function to convert expression
   [
     "dateString(1234567890) | prefix('Date: ')",
     '"Date: " + new Date(1234567890).toString()',
@@ -115,8 +119,12 @@ const TEST_CASES: [string, string | null][] = [
     "print(foo) && bar",
     "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
   ], // uses `print` function block inline
+
+  // Unary operators
   ["!foo", null], // unary operator
   ["~foo", "!!foo"], // custom unary operator
+
+  // Binary operators
   ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
   ["5 .. 15", "new Array(15 - 5).fill(0).map((_, i) => 5 + i)"], // uses `..` custom binary operator
   [
