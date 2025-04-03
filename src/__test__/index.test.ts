@@ -98,6 +98,11 @@ const TEST_CASES: [string, string | null][] = [
   ["a | b < c ? true : false", "b(a) < c ? true : false"],
 
   // Transforms
+  ["x | length", "x?.length"], // uses `length` transform to convert expression
+  [
+    "MyArrayWhichIsAlwaysDefined | length",
+    "MyArrayWhichIsAlwaysDefined.length",
+  ], // uses `length` transform to convert expression
   ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
   ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
   ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
@@ -162,6 +167,10 @@ describe.each(TEST_CASES)("%s", (input, expected) => {
             functionParser,
             translateTransforms: TRANSLATE_TRANSFORMS,
             translateFunctions: TRANSLATE_FUNCTIONS,
+            isBuiltInIdentifier: (identifier: string[]) =>
+              identifier.length === 1 &&
+              (identifier[0] === "MyArrayWhichIsAlwaysDefined" ||
+                identifier[0] === "console"),
           };
 
           test("estreeFromJexlString", () => {

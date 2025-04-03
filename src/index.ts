@@ -7,6 +7,7 @@ export interface EstreeFromJexlAstOptions {
   functionParser?: (func: string) => types.Program;
   translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
   translateFunctions?: Record<string, (...args: any[]) => any>;
+  isIdentifierAlwaysDefined?: (identifier: string[]) => boolean;
 }
 
 export function estreeFromJexlString(
@@ -303,29 +304,48 @@ export function estreeFromJexlAst(
           optional
         );
       }
-    case "FunctionCall":
-      // Check for overrides, then Jexl grammar, for functions/transform implementations
+    case "FunctionCall": {
       const newAstFromFunction = (() => {
         switch (ast.pool) {
-          case "transforms":
-            return createExpressionFromFunction(
+          case "transforms": {
+            const transformFunc =
               options.translateTransforms?.[ast.name] ??
-                grammar.transforms[ast.name],
-              ast.args.map(recur)
-            );
-          case "functions":
-            return createExpressionFromFunction(
+              grammar.transforms[ast.name];
+            if (transformFunc) {
+              const result = createExpressionFromFunction(
+                transformFunc,
+                ast.args.map(recur)
+              );
+              return result
+                ? addOptionalChainingToMemberExpressions(result, options)
+                : result;
+            }
+            break;
+          }
+          case "functions": {
+            const func =
               options.translateFunctions?.[ast.name] ??
-                grammar.functions[ast.name],
-              ast.args.map(recur)
-            );
+              grammar.functions[ast.name];
+            if (func) {
+              const result = createExpressionFromFunction(
+                func,
+                ast.args.map(recur)
+              );
+              return result
+                ? addOptionalChainingToMemberExpressions(result, options)
+                : result;
+            }
+            break;
+          }
         }
       })();
 
-      return (
-        newAstFromFunction ??
-        b.callExpression(b.identifier(ast.name), ast.args.map(recur))
-      );
+      if (newAstFromFunction) {
+        return newAstFromFunction;
+      }
+
+      return b.callExpression(b.identifier(ast.name), ast.args.map(recur));
+    }
   }
 }
 
@@ -334,6 +354,90 @@ function isStaticExpression(expr: types.Expression): boolean {
   return (
     is.arrayExpression(expr) || is.objectExpression(expr) || is.literal(expr)
   );
+}
+
+const BUILT_IN_IDENTIFIERS = Object.freeze(
+  new Set([
+    "Object",
+    "Array",
+    "String",
+    "Number",
+    "Boolean",
+    "Date",
+    "Math",
+    "JSON",
+    "Error",
+    "Map",
+    "Set",
+    "WeakMap",
+    "WeakSet",
+    "Promise",
+    "Symbol",
+    "RegExp",
+    "BigInt",
+    "BigInt64Array",
+    "BigUint64Array",
+    "Int8Array",
+    "Int16Array",
+    "Int32Array",
+    "Uint8Array",
+    "Uint8ClampedArray",
+    "Uint16Array",
+    "Uint32Array",
+    "Float32Array",
+    "Float64Array",
+    "DataView",
+  ])
+);
+
+// Helper to add optional chaining to all member expressions in an AST
+function addOptionalChainingToMemberExpressions(
+  ast: types.Expression,
+  options: EstreeFromJexlAstOptions
+): types.Expression {
+  traverse(ast, {
+    MemberExpression(path) {
+      if (path.node && is.expression(path.node.object)) {
+        // Don't add optional chaining for built-in objects
+        if (
+          is.identifier(path.node.object) &&
+          (BUILT_IN_IDENTIFIERS.has(path.node.object.name) ||
+            options.isIdentifierAlwaysDefined?.(
+              getIdentifierPathFromNodePath(path.node.object)
+            ))
+        ) {
+          path.node.optional = false;
+          return;
+        }
+        // Don't add optional chaining for new expressions (e.g. new Date().toString())
+        if (is.newExpression(path.node.object)) {
+          path.node.optional = false;
+          return;
+        }
+        path.node.optional = !isStaticExpression(path.node.object);
+      }
+    },
+  });
+  return ast;
+}
+
+// Helper to get an identifier path from a node path
+function getIdentifierPathFromNodePath(
+  path: types.Expression | types.Super
+): string[] {
+  if (is.identifier(path)) {
+    return [path.name];
+  }
+  if (is.memberExpression(path)) {
+    const objectPath = getIdentifierPathFromNodePath(path.object);
+    if (is.identifier(path.property)) {
+      return [...objectPath, path.property.name];
+    }
+    if (is.literal(path.property) && typeof path.property.value === "string") {
+      return [...objectPath, path.property.value];
+    }
+  }
+  return [];
 }
 
 function findAllRelativeIdentifiers(
