@@ -135,10 +135,14 @@ export function estreeFromJexlAst(
 
     case "Identifier":
       if (ast.from) {
+        const object = recur(ast.from);
+        // Use optional chaining for member expressions unless the object is a static literal
+        const optional = !isStaticExpression(object);
         return b.memberExpression(
-          recur(ast.from),
+          object,
           b.identifier(ast.value),
-          false
+          false, // computed
+          optional // Use optional chaining for non-static expressions
         );
       } else {
         return b.identifier(ast.value);
@@ -220,11 +224,15 @@ export function estreeFromJexlAst(
             [b.binaryExpression("/", recur(ast.left), recur(ast.right))]
           );
         case "in":
+          const rightExpr = recur(ast.right);
+          // Use optional chaining for includes() call unless the object is a static literal
+          const optional = !isStaticExpression(rightExpr);
           return b.callExpression(
             b.memberExpression(
-              recur(ast.right),
+              rightExpr,
               b.identifier("includes"),
-              false
+              false,
+              optional
             ),
             [recur(ast.left)]
           );
@@ -260,9 +268,12 @@ export function estreeFromJexlAst(
       );
     case "FilterExpression":
       if (ast.relative) {
+        const subject = recur(ast.subject);
+        // Use optional chaining for filter() call unless the object is a static literal
+        const optional = !isStaticExpression(subject);
         // Extract all properties used to index into the object
         return b.callExpression(
-          b.memberExpression(recur(ast.subject), b.identifier("filter")),
+          b.memberExpression(subject, b.identifier("filter"), false, optional),
           [
             b.arrowFunctionExpression(
               findAllRelativeIdentifiers(ast.expr).map((name) =>
@@ -282,7 +293,15 @@ export function estreeFromJexlAst(
         );
       } else {
         // We are just indexing into an object/array
-        return b.memberExpression(recur(ast.subject), recur(ast.expr), true);
+        const subject = recur(ast.subject);
+        // Use optional chaining for computed properties unless the object is a static literal
+        const optional = !isStaticExpression(subject);
+        return b.memberExpression(
+          subject,
+          recur(ast.expr),
+          true, // computed
+          optional
+        );
       }
     case "FunctionCall":
       // Check for overrides, then Jexl grammar, for functions/transform implementations
@@ -308,6 +327,13 @@ export function estreeFromJexlAst(
         b.callExpression(b.identifier(ast.name), ast.args.map(recur))
       );
   }
+}
+
+// Helper to determine if an expression is a static literal
+function isStaticExpression(expr: types.Expression): boolean {
+  return (
+    is.arrayExpression(expr) || is.objectExpression(expr) || is.literal(expr)
+  );
 }
 
 function findAllRelativeIdentifiers(

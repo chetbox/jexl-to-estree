@@ -56,16 +56,16 @@ const TEST_CASES: [string, string | null][] = [
   ["8.27936475869709331257", "8.279364758697094"],
   ["-8.27936475869709331257", "-8.279364758697094"],
   ["a != b", "a !== b"],
-  ["foo .bar .baz", "foo.bar.baz"],
-  ['foo["bar"].baz', null],
+  ["foo .bar .baz", "foo?.bar?.baz"],
+  ['foo["bar"].baz', 'foo?.["bar"]?.baz'],
   ["foo  ? bar  : baz", "foo ? bar : baz"],
-  ["{ one: a.value, two: b.value }", `{\n  one: a.value,\n  two: b.value\n}`],
+  ["{ one: a.value, two: b.value }", "{\n  one: a?.value,\n  two: b?.value\n}"],
   ["! foo", "!foo"],
-  ["foo.bar   ==   foo.baz", "foo.bar === foo.baz"],
+  ["foo.bar   ==   foo.baz", "foo?.bar === foo?.baz"],
   ['[true,"two",3]', '[true, "two", 3]'],
-  ["foo[.bar == 3]", "foo.filter((\n  {\n    bar\n  }\n) => bar === 3)"],
-  ["foo[bar == 3]", "foo[bar === 3]"],
-  ['foo[bar + "baz"]', null],
+  ["foo[.bar == 3]", "foo?.filter((\n  {\n    bar\n  }\n) => bar === 3)"],
+  ["foo[bar == 3]", "foo?.[bar === 3]"],
+  ['foo[bar + "baz"]', 'foo?.[bar + "baz"]'],
   ["foo | bar | baz(1, 2)", "baz(bar(foo), 1, 2)"],
   ["baz(bar(foo), 1, 2)", null],
   ["1 + (2 * 3)", "1 + 2 * 3"],
@@ -75,16 +75,17 @@ const TEST_CASES: [string, string | null][] = [
   ["b // 10", "Math.floor(b / 10)"],
   [
     '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
-    'Math.floor(1 / 2) * Math.pow((foo["bar"] - 4) % 6, foo.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3))',
+    'Math.floor(1 / 2) * Math.pow((foo?.["bar"] - 4) % 6, foo?.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3))',
   ],
   ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
   ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],
-  ["a.b[e.f].c[g.h].d", null],
-  ["a[c][d].b", null],
+  ['"a" in list', 'list?.includes("a")'], // `list` may be undefined
+  ["a.b[e.f].c[g.h].d", "a?.b?.[e?.f]?.c?.[g?.h]?.d"],
+  ["a[c][d].b", "a?.[c]?.[d]?.b"],
   ["(a ? b : c) + (d && (e || f))", null],
   ["!a", null],
   ["!(a && b)", null],
-  ["!a[b]", null],
+  ["!a[b]", "!a?.[b]"],
   ["!a ? b : c", null],
   ["!(a ? b : c)", null],
   [
@@ -105,7 +106,7 @@ const TEST_CASES: [string, string | null][] = [
   ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
   ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
   ["x | toJSON(null, 2)", "JSON.stringify(x, null, 2)"], // uses `toJSON` transform with arguments
-  ["(x.value / 1000) | floor", "Math.floor(x.value / 1000)"], // uses `floor` transform to convert expression
+  ["(x / 1000) | floor", "Math.floor(x / 1000)"], // uses `floor` transform to convert expression
 
   // Functions
   ["now() + 1000", "Date.now() + 1000"], // uses `now` function to convert expression
