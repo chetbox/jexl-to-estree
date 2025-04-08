@@ -1,7 +1,14 @@
 import type { Jexl } from "jexl";
 import JexlAst from "jexl/Ast";
 import JexlGrammar from "jexl/Grammar";
-import { traverse, builders as b, is, types, utils } from "estree-toolkit";
+import {
+  traverse,
+  builders as b,
+  is,
+  types,
+  utils,
+  NodePath,
+} from "estree-toolkit";
 
 export interface EstreeFromJexlAstOptions {
   functionParser?: (func: string) => types.Program;
@@ -23,6 +30,25 @@ export function estreeFromJexlString(
 }
 
 export function estreeFromJexlAst(
+  grammar: JexlGrammar,
+  ast: JexlAst,
+  options: EstreeFromJexlAstOptions = {},
+  ancestors: JexlAst[] = []
+): types.Expression {
+  let esTreeAst = _estreeFromJexlAst(grammar, ast, options, ancestors);
+
+  // Add optional chaining to relevant member expressions in the AST
+  esTreeAst = addOptionalChainingToMemberExpressions(esTreeAst, options);
+
+  return esTreeAst;
+}
+
+/**
+ * Note that no optional chaining is added to the AST returned by this function.
+ *
+ * Used `estreeFromJexlAst` instead.
+ */
+function _estreeFromJexlAst(
   grammar: JexlGrammar,
   ast: JexlAst,
   options: EstreeFromJexlAstOptions = {},
@@ -137,13 +163,10 @@ export function estreeFromJexlAst(
     case "Identifier":
       if (ast.from) {
         const object = recur(ast.from);
-        // Use optional chaining for member expressions unless the object is a static literal
-        const optional = !isStaticExpression(object);
         return b.memberExpression(
           object,
           b.identifier(ast.value),
-          false, // computed
-          optional // Use optional chaining for non-static expressions
+          false // computed
         );
       } else {
         return b.identifier(ast.value);
@@ -227,14 +250,8 @@ export function estreeFromJexlAst(
         case "in":
           const rightExpr = recur(ast.right);
           // Use optional chaining for includes() call unless the object is a static literal
-          const optional = !isStaticExpression(rightExpr);
           return b.callExpression(
-            b.memberExpression(
-              rightExpr,
-              b.identifier("includes"),
-              false,
-              optional
-            ),
+            b.memberExpression(rightExpr, b.identifier("includes"), false),
             [recur(ast.left)]
           );
         default:
@@ -270,11 +287,9 @@ export function estreeFromJexlAst(
     case "FilterExpression":
       if (ast.relative) {
         const subject = recur(ast.subject);
-        // Use optional chaining for filter() call unless the object is a static literal
-        const optional = !isStaticExpression(subject);
         // Extract all properties used to index into the object
         return b.callExpression(
-          b.memberExpression(subject, b.identifier("filter"), false, optional),
+          b.memberExpression(subject, b.identifier("filter"), false),
           [
             b.arrowFunctionExpression(
               findAllRelativeIdentifiers(ast.expr).map((name) =>
@@ -296,12 +311,10 @@ export function estreeFromJexlAst(
         // We are just indexing into an object/array
         const subject = recur(ast.subject);
         // Use optional chaining for computed properties unless the object is a static literal
-        const optional = !isStaticExpression(subject);
         return b.memberExpression(
           subject,
           recur(ast.expr),
-          true, // computed
-          optional
+          true // computed
         );
       }
     case "FunctionCall": {
@@ -316,9 +329,7 @@ export function estreeFromJexlAst(
                 transformFunc,
                 ast.args.map(recur)
               );
-              return result
-                ? addOptionalChainingToMemberExpressions(result, options)
-                : result;
+              return result ? result : undefined;
             }
             break;
           }
@@ -331,9 +342,7 @@ export function estreeFromJexlAst(
                 func,
                 ast.args.map(recur)
               );
-              return result
-                ? addOptionalChainingToMemberExpressions(result, options)
-                : result;
+              return result ? result : undefined;
             }
             break;
           }
@@ -347,13 +356,6 @@ export function estreeFromJexlAst(
       return b.callExpression(b.identifier(ast.name), ast.args.map(recur));
     }
   }
-}
-
-// Helper to determine if an expression is a static literal
-function isStaticExpression(expr: types.Expression): boolean {
-  return (
-    is.arrayExpression(expr) || is.objectExpression(expr) || is.literal(expr)
-  );
 }
 
 const BUILT_IN_IDENTIFIERS = Object.freeze(
@@ -395,25 +397,41 @@ function addOptionalChainingToMemberExpressions(
   ast: types.Expression,
   options: EstreeFromJexlAstOptions
 ): types.Expression {
+  // Helper to determine if an expression is a static literal
+  function isStaticExpression(expr: types.Expression): boolean {
+    return (
+      is.arrayExpression(expr) || is.objectExpression(expr) || is.literal(expr)
+    );
+  }
+
   traverse(ast, {
     MemberExpression(path) {
-      if (path.node && is.expression(path.node.object)) {
-        // Don't add optional chaining for built-in objects
+      // Don't add optional chaining for new expressions (e.g. new Date().toString())
+      if (is.newExpression(path.node?.object)) {
+        path.node.optional = false;
+        return;
+      }
+
+      // Don't add optional chaining for built-in objects
+      // or objects the user says are always defined
+      if (
+        is.identifier(path.node?.object) ||
+        is.memberExpression(path.node?.object)
+      ) {
+        const identifierPath = getIdentifierPathFromNodePath(
+          path.get("object")
+        );
         if (
-          is.identifier(path.node.object) &&
-          (BUILT_IN_IDENTIFIERS.has(path.node.object.name) ||
-            options.isIdentifierAlwaysDefined?.(
-              getIdentifierPathFromNodePath(path.node.object)
-            ))
+          identifierPath.length > 0 &&
+          (BUILT_IN_IDENTIFIERS.has(identifierPath[0]) ||
+            options.isIdentifierAlwaysDefined?.(identifierPath))
         ) {
           path.node.optional = false;
           return;
         }
-        // Don't add optional chaining for new expressions (e.g. new Date().toString())
-        if (is.newExpression(path.node.object)) {
-          path.node.optional = false;
-          return;
-        }
+      }
+
+      if (is.expression(path.node?.object)) {
         path.node.optional = !isStaticExpression(path.node.object);
       }
     },
@@ -423,18 +441,21 @@ function addOptionalChainingToMemberExpressions(
 
 // Helper to get an identifier path from a node path
 function getIdentifierPathFromNodePath(
-  path: types.Expression | types.Super
+  path: NodePath<types.MemberExpression | types.Expression | types.Super>
 ): string[] {
-  if (is.identifier(path)) {
-    return [path.name];
+  if (is.identifier(path.node)) {
+    return [path.node.name];
   }
-  if (is.memberExpression(path)) {
-    const objectPath = getIdentifierPathFromNodePath(path.object);
-    if (is.identifier(path.property)) {
-      return [...objectPath, path.property.name];
+  if (is.memberExpression(path.node)) {
+    const objectPath = getIdentifierPathFromNodePath(path.get("object"));
+    if (is.identifier(path.node.property)) {
+      return [...objectPath, path.node.property.name];
     }
-    if (is.literal(path.property) && typeof path.property.value === "string") {
-      return [...objectPath, path.property.value];
+    if (
+      is.literal(path.node.property) &&
+      typeof path.node.property.value === "string"
+    ) {
+      return [...objectPath, path.node.property.value];
     }
   }
   return [];

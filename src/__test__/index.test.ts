@@ -96,6 +96,7 @@ const TEST_CASES: [string, string | null][] = [
   ["a < b | c", "a < c(b)"],
   ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
   ["a | b < c ? true : false", "b(a) < c ? true : false"],
+  ["MyObjectWhichIsAlwaysDefined.MyObjectWhichIsAlwaysDefined.foo", null], // Custom global object which doesn't use optional chaining
 
   // Transforms
   ["x | length", "x?.length"], // uses `length` transform to convert expression
@@ -132,7 +133,7 @@ const TEST_CASES: [string, string | null][] = [
 
   // Binary operators
   ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
-  ["5 .. 15", "new Array(15 - 5).fill(0).map((_, i) => 5 + i)"], // uses `..` custom binary operator
+  ["5 .. 15", "new Array(15 - 5).fill(0)?.map((_, i) => 5 + i)"], // uses `..` custom binary operator
   [
     '[{ direction: "Right", clicks: 1}, { direction: "Left", clicks: 2 }]',
     '[{\n  direction: "Right",\n  clicks: 1\n}, {\n  direction: "Left",\n  clicks: 2\n}]',
@@ -167,10 +168,22 @@ describe.each(TEST_CASES)("%s", (input, expected) => {
             functionParser,
             translateTransforms: TRANSLATE_TRANSFORMS,
             translateFunctions: TRANSLATE_FUNCTIONS,
-            isBuiltInIdentifier: (identifier: string[]) =>
-              identifier.length === 1 &&
-              (identifier[0] === "MyArrayWhichIsAlwaysDefined" ||
-                identifier[0] === "console"),
+            isIdentifierAlwaysDefined: (identifier: string[]) => {
+              switch (identifier.length) {
+                case 1:
+                  return (
+                    identifier[0] === "console" ||
+                    identifier[0] === "MyArrayWhichIsAlwaysDefined" ||
+                    identifier[0] === "MyObjectWhichIsAlwaysDefined"
+                  );
+                case 2:
+                  return (
+                    identifier[0] === "MyObjectWhichIsAlwaysDefined" &&
+                    identifier[1] === "MyObjectWhichIsAlwaysDefined"
+                  );
+              }
+              return false;
+            },
           };
 
           test("estreeFromJexlString", () => {
