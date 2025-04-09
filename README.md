@@ -54,8 +54,8 @@ jexl.addFunction("now", () => Date.now());
   recast.print(ast).code; // "[1, 2, 3].length"
 }
 {
-  const ast = estreeFromJexlString(jexl, "[1,2,3] | length");
-  recast.print(ast).code; // "[1, 2, 3].length"
+  const ast = estreeFromJexlString(jexl, "x | length");
+  recast.print(ast).code; // "x?.length"
 }
 {
   const ast = estreeFromJexlString(jexl, "[1,2,3] | some(1)");
