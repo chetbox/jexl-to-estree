@@ -217,15 +217,10 @@ function _estreeFromJexlAst(
         case "|":
         case "instanceof":
         case "**":
-          return b.binaryExpression(
-            ast.operator,
-            recur(ast.left),
-            recur(ast.right)
-          );
         case "==":
         case "!=":
           return b.binaryExpression(
-            ast.operator === "==" ? "===" : "!==",
+            ast.operator,
             recur(ast.left),
             recur(ast.right)
           );

@@ -8,9 +8,9 @@ import { types } from "estree-toolkit";
 const jexl = new Jexl();
 jexl.addTransforms({
   length: (val) => val.length,
-  some: (values, matchValue) => values.some((v) => v === matchValue),
+  some: (values, matchValue) => values.some((v) => v == matchValue),
   every: function every(values, matchValue) {
-    return values.every((v) => v === matchValue);
+    return values.every((v) => v == matchValue);
   },
   parseInt: (val: string, radix?: number) => parseInt(val, radix),
   fromJSON: (
@@ -47,7 +47,7 @@ const TRANSLATE_FUNCTIONS = {
 };
 
 const TEST_CASES: [string, string | null][] = [
-  ["true", "true"],
+  ["true", null],
   ["'hello world'", '"hello world"'],
   ["123.0", "123"],
   ["-123.0", "-123"],
@@ -55,16 +55,16 @@ const TEST_CASES: [string, string | null][] = [
   ["-123456789101112131415161718", "-1.2345678910111214e+26"],
   ["8.27936475869709331257", "8.279364758697094"],
   ["-8.27936475869709331257", "-8.279364758697094"],
-  ["a != b", "a !== b"],
+  ["a != b", null],
   ["foo .bar .baz", "foo?.bar?.baz"],
   ['foo["bar"].baz', 'foo?.["bar"]?.baz'],
   ["foo  ? bar  : baz", "foo ? bar : baz"],
   ["{ one: a.value, two: b.value }", "{\n  one: a?.value,\n  two: b?.value\n}"],
   ["! foo", "!foo"],
-  ["foo.bar   ==   foo.baz", "foo?.bar === foo?.baz"],
+  ["foo.bar   ==   foo.baz", "foo?.bar == foo?.baz"],
   ['[true,"two",3]', '[true, "two", 3]'],
-  ["foo[.bar == 3]", "foo?.filter((\n  {\n    bar\n  }\n) => bar === 3)"],
-  ["foo[bar == 3]", "foo?.[bar === 3]"],
+  ["foo[.bar == 3]", "foo?.filter((\n  {\n    bar\n  }\n) => bar == 3)"],
+  ["foo[bar == 3]", "foo?.[bar == 3]"],
   ['foo[bar + "baz"]', 'foo?.[bar + "baz"]'],
   ["foo | bar | baz(1, 2)", "baz(bar(foo), 1, 2)"],
   ["baz(bar(foo), 1, 2)", null],
@@ -75,7 +75,7 @@ const TEST_CASES: [string, string | null][] = [
   ["b // 10", "Math.floor(b / 10)"],
   [
     '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
-    'Math.floor(1 / 2) * ((foo?.["bar"] - 4) % 6) ** foo?.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3)',
+    'Math.floor(1 / 2) * ((foo?.["bar"] - 4) % 6) ** foo?.filter((\n  {\n    bar\n  }\n) => bar == 1 * 2 * 3)',
   ],
   ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
   ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],
@@ -90,7 +90,7 @@ const TEST_CASES: [string, string | null][] = [
   ["!(a ? b : c)", null],
   [
     '(z + 0) + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
-    'z + 0 + " A " + (a + 1) + " B " + (b + 2) + " C " + (c === 0 ? "c1" : "c2")',
+    'z + 0 + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
   ],
   ["a ? b1 ? b2 : b3 : c1 ? c2 : c3", null],
   ["a < b | c", "a < c(b)"],
@@ -105,8 +105,8 @@ const TEST_CASES: [string, string | null][] = [
     "MyArrayWhichIsAlwaysDefined.length",
   ], // uses `length` transform to convert expression
   ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
-  ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v === 1)"], // uses `some` transform to convert expression
-  ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v === 1)"], // uses `every` transform to convert expression - unwraps function block
+  ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v == 1)"], // uses `some` transform to convert expression
+  ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v == 1)"], // uses `every` transform to convert expression - unwraps function block
   ['"1234" | parseInt', 'parseInt("1234")'], // uses `parseInt` transform to convert expression with no argument
   ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
   ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
@@ -172,14 +172,14 @@ describe.each(TEST_CASES)("%s", (input, expected) => {
               switch (identifier.length) {
                 case 1:
                   return (
-                    identifier[0] === "console" ||
-                    identifier[0] === "MyArrayWhichIsAlwaysDefined" ||
-                    identifier[0] === "MyObjectWhichIsAlwaysDefined"
+                    identifier[0] == "console" ||
+                    identifier[0] == "MyArrayWhichIsAlwaysDefined" ||
+                    identifier[0] == "MyObjectWhichIsAlwaysDefined"
                   );
                 case 2:
                   return (
-                    identifier[0] === "MyObjectWhichIsAlwaysDefined" &&
-                    identifier[1] === "MyObjectWhichIsAlwaysDefined"
+                    identifier[0] == "MyObjectWhichIsAlwaysDefined" &&
+                    identifier[1] == "MyObjectWhichIsAlwaysDefined"
                   );
               }
               return false;
