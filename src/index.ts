@@ -259,11 +259,16 @@ function _estreeFromJexlAst(
           throw new Error("Unknown binary operator: " + ast.operator);
       }
     case "ConditionalExpression":
-      return b.conditionalExpression(
-        recur(ast.test),
-        recur(ast.consequent),
-        recur(ast.alternate)
-      );
+      if (ast.consequent) {
+        return b.conditionalExpression(
+          recur(ast.test),
+          recur(ast.consequent),
+          recur(ast.alternate)
+        );
+      } else {
+        // When `ast.consequent` is not defined this is an "elvis" operator which we can translate to `||`
+        return b.logicalExpression("||", recur(ast.test), recur(ast.alternate));
+      }
     case "ArrayLiteral":
       return b.arrayExpression(ast.value.map(recur));
     case "ObjectLiteral":
