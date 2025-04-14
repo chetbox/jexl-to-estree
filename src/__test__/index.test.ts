@@ -98,6 +98,10 @@ const TEST_CASES: [string, string | null][] = [
   ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
   ["a | b < c ? true : false", "b(a) < c ? true : false"],
   ["MyObjectWhichIsAlwaysDefined.MyObjectWhichIsAlwaysDefined.foo", null], // Custom global object which doesn't use optional chaining
+  [
+    "MyObjectWhichIsAlwaysDefined[a + b].foo",
+    "MyObjectWhichIsAlwaysDefined[a + b]?.foo",
+  ], // Indexing into a known object with a computed key always uses optional chaining because we don't know if the key exists
 
   // Transforms
   ["x | length", "x?.length"], // uses `length` transform to convert expression
