@@ -47,98 +47,98 @@ const TRANSLATE_FUNCTIONS = {
 };
 
 const TEST_CASES: [string, string | null][] = [
-  // ["true", null],
-  // ["'hello world'", '"hello world"'],
-  // ["123.0", "123"],
-  // ["-123.0", "-123"],
-  // ["123456789101112131415161718", "1.2345678910111214e+26"],
-  // ["-123456789101112131415161718", "-1.2345678910111214e+26"],
-  // ["8.27936475869709331257", "8.279364758697094"],
-  // ["-8.27936475869709331257", "-8.279364758697094"],
-  // ["a != b", null],
+  ["true", null],
+  ["'hello world'", '"hello world"'],
+  ["123.0", "123"],
+  ["-123.0", "-123"],
+  ["123456789101112131415161718", "1.2345678910111214e+26"],
+  ["-123456789101112131415161718", "-1.2345678910111214e+26"],
+  ["8.27936475869709331257", "8.279364758697094"],
+  ["-8.27936475869709331257", "-8.279364758697094"],
+  ["a != b", null],
   ['foo ?: "Empty"', 'foo || "Empty"'],
-  // ["foo .bar .baz", "foo?.bar?.baz"],
-  // ['foo["bar"].baz', 'foo?.["bar"]?.baz'],
-  // ["foo  ? bar  : baz", "foo ? bar : baz"],
-  // ["{ one: a.value, two: b.value }", "{\n  one: a?.value,\n  two: b?.value\n}"],
-  // ["! foo", "!foo"],
-  // ["foo.bar   ==   foo.baz", "foo?.bar == foo?.baz"],
-  // ['[true,"two",3]', '[true, "two", 3]'],
-  // ["foo[.bar == 3]", "foo?.filter((\n  {\n    bar\n  }\n) => bar == 3)"],
-  // ["foo[bar == 3]", "foo?.[bar == 3]"],
-  // ['foo[bar + "baz"]', 'foo?.[bar + "baz"]'],
-  // ["foo | bar | baz(1, 2)", "baz(bar(foo), 1, 2)"],
-  // ["baz(bar(foo), 1, 2)", null],
-  // ["1 + (2 * 3)", "1 + 2 * 3"],
-  // ["(1 + 2) * 3", null],
-  // ["1 + 2 + 3 - 3 - 2 - 1", null],
-  // ["a ^ 3", "a ** 3"],
-  // ["b // 10", "Math.floor(b / 10)"],
-  // [
-  //   '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
-  //   'Math.floor(1 / 2) * ((foo?.["bar"] - 4) % 6) ** foo?.filter((\n  {\n    bar\n  }\n) => bar == 1 * 2 * 3)',
-  // ],
-  // ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
-  // ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],
-  // ['"a" in list', 'list?.includes("a")'], // `list` may be undefined
-  // ["a.b[e.f].c[g.h].d", "a?.b?.[e?.f]?.c?.[g?.h]?.d"],
-  // ["a[c][d].b", "a?.[c]?.[d]?.b"],
-  // ["(a ? b : c) + (d && (e || f))", null],
-  // ["!a", null],
-  // ["!(a && b)", null],
-  // ["!a[b]", "!a?.[b]"],
-  // ["!a ? b : c", null],
-  // ["!(a ? b : c)", null],
-  // [
-  //   '(z + 0) + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
-  //   'z + 0 + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
-  // ],
-  // ["a ? b1 ? b2 : b3 : c1 ? c2 : c3", null],
-  // ["a < b | c", "a < c(b)"],
-  // ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
-  // ["a | b < c ? true : false", "b(a) < c ? true : false"],
-  // ["MyObjectWhichIsAlwaysDefined.MyObjectWhichIsAlwaysDefined.foo", null], // Custom global object which doesn't use optional chaining
+  ["foo .bar .baz", "foo?.bar?.baz"],
+  ['foo["bar"].baz', 'foo?.["bar"]?.baz'],
+  ["foo  ? bar  : baz", "foo ? bar : baz"],
+  ["{ one: a.value, two: b.value }", "{\n  one: a?.value,\n  two: b?.value\n}"],
+  ["! foo", "!foo"],
+  ["foo.bar   ==   foo.baz", "foo?.bar == foo?.baz"],
+  ['[true,"two",3]', '[true, "two", 3]'],
+  ["foo[.bar == 3]", "foo?.filter((\n  {\n    bar\n  }\n) => bar == 3)"],
+  ["foo[bar == 3]", "foo?.[bar == 3]"],
+  ['foo[bar + "baz"]', 'foo?.[bar + "baz"]'],
+  ["foo | bar | baz(1, 2)", "baz(bar(foo), 1, 2)"],
+  ["baz(bar(foo), 1, 2)", null],
+  ["1 + (2 * 3)", "1 + 2 * 3"],
+  ["(1 + 2) * 3", null],
+  ["1 + 2 + 3 - 3 - 2 - 1", null],
+  ["a ^ 3", "a ** 3"],
+  ["b // 10", "Math.floor(b / 10)"],
+  [
+    '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
+    'Math.floor(1 / 2) * ((foo?.["bar"] - 4) % 6) ** foo?.filter((\n  {\n    bar\n  }\n) => bar == 1 * 2 * 3)',
+  ],
+  ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
+  ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],
+  ['"a" in list', 'list?.includes("a")'], // `list` may be undefined
+  ["a.b[e.f].c[g.h].d", "a?.b?.[e?.f]?.c?.[g?.h]?.d"],
+  ["a[c][d].b", "a?.[c]?.[d]?.b"],
+  ["(a ? b : c) + (d && (e || f))", null],
+  ["!a", null],
+  ["!(a && b)", null],
+  ["!a[b]", "!a?.[b]"],
+  ["!a ? b : c", null],
+  ["!(a ? b : c)", null],
+  [
+    '(z + 0) + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
+    'z + 0 + " A " + (a + 1) + " B " + (b + 2) + " C " + (c == 0 ? "c1" : "c2")',
+  ],
+  ["a ? b1 ? b2 : b3 : c1 ? c2 : c3", null],
+  ["a < b | c", "a < c(b)"],
+  ["a < (b | c) ? true : false", "a < c(b) ? true : false"], // Jexl can't parse this if the brackets are removed
+  ["a | b < c ? true : false", "b(a) < c ? true : false"],
+  ["MyObjectWhichIsAlwaysDefined.MyObjectWhichIsAlwaysDefined.foo", null], // Custom global object which doesn't use optional chaining
 
-  // // Transforms
-  // ["x | length", "x?.length"], // uses `length` transform to convert expression
-  // [
-  //   "MyArrayWhichIsAlwaysDefined | length",
-  //   "MyArrayWhichIsAlwaysDefined.length",
-  // ], // uses `length` transform to convert expression
-  // ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
-  // ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v == 1)"], // uses `some` transform to convert expression
-  // ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v == 1)"], // uses `every` transform to convert expression - unwraps function block
-  // ['"1234" | parseInt', 'parseInt("1234")'], // uses `parseInt` transform to convert expression with no argument
-  // ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
-  // ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
-  // ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
-  // ["x | toJSON(null, 2)", "JSON.stringify(x, null, 2)"], // uses `toJSON` transform with arguments
-  // ["(x / 1000) | floor", "Math.floor(x / 1000)"], // uses `floor` transform to convert expression
+  // Transforms
+  ["x | length", "x?.length"], // uses `length` transform to convert expression
+  [
+    "MyArrayWhichIsAlwaysDefined | length",
+    "MyArrayWhichIsAlwaysDefined.length",
+  ], // uses `length` transform to convert expression
+  ["[1,2,3] | length", "[1, 2, 3].length"], // uses `length` transform to convert expression
+  ["[1,2,3] | some(1)", "[1, 2, 3].some((v) => v == 1)"], // uses `some` transform to convert expression
+  ["[1,2,3] | every(1)", "[1, 2, 3].every((v) => v == 1)"], // uses `every` transform to convert expression - unwraps function block
+  ['"1234" | parseInt', 'parseInt("1234")'], // uses `parseInt` transform to convert expression with no argument
+  ['"abcd" | parseInt(16)', 'parseInt("abcd", 16)'], // uses `parseInt` transform to convert expression with argument
+  ['"1234" | parseInt(16, "nonsense")', 'parseInt("1234", 16)'], // `parseInt` transform extra argument ignored
+  ["'{a: 123}' | fromJSON | toJSON", 'JSON.stringify(JSON.parse("{a: 123}"))'], // uses `fromJSON` and `toJSON` transforms to convert expression
+  ["x | toJSON(null, 2)", "JSON.stringify(x, null, 2)"], // uses `toJSON` transform with arguments
+  ["(x / 1000) | floor", "Math.floor(x / 1000)"], // uses `floor` transform to convert expression
 
-  // // Functions
-  // ["now() + 1000", "Date.now() + 1000"], // uses `now` function to convert expression
-  // [
-  //   "dateString(1234567890) | prefix('Date: ')",
-  //   '"Date: " + new Date(1234567890).toString()',
-  // ], // uses custom function and transform handler
-  // ["dateString()", "new Date(undefined).toString()"], // uses custom function handler, replacing the missing argument with `undefined`
-  // ["dateString(1234567890)", "new Date(1234567890).toString()"], // uses custom function with argument
-  // [
-  //   "print(foo) && bar",
-  //   "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
-  // ], // uses `print` function block inline
+  // Functions
+  ["now() + 1000", "Date.now() + 1000"], // uses `now` function to convert expression
+  [
+    "dateString(1234567890) | prefix('Date: ')",
+    '"Date: " + new Date(1234567890).toString()',
+  ], // uses custom function and transform handler
+  ["dateString()", "new Date(undefined).toString()"], // uses custom function handler, replacing the missing argument with `undefined`
+  ["dateString(1234567890)", "new Date(1234567890).toString()"], // uses custom function with argument
+  [
+    "print(foo) && bar",
+    "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
+  ], // uses `print` function block inline
 
-  // // Unary operators
-  // ["!foo", null], // unary operator
-  // ["~foo", "!!foo"], // custom unary operator
+  // Unary operators
+  ["!foo", null], // unary operator
+  ["~foo", "!!foo"], // custom unary operator
 
-  // // Binary operators
-  // ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
-  // ["5 .. 15", "new Array(15 - 5).fill(0)?.map((_, i) => 5 + i)"], // uses `..` custom binary operator
-  // [
-  //   '[{ direction: "Right", clicks: 1}, { direction: "Left", clicks: 2 }]',
-  //   '[{\n  direction: "Right",\n  clicks: 1\n}, {\n  direction: "Left",\n  clicks: 2\n}]',
-  // ], // array of objects
+  // Binary operators
+  ["'hello' <> 'world'", '"hello" + "world"'], // uses `..` custom binary operator
+  ["5 .. 15", "new Array(15 - 5).fill(0)?.map((_, i) => 5 + i)"], // uses `..` custom binary operator
+  [
+    '[{ direction: "Right", clicks: 1}, { direction: "Left", clicks: 2 }]',
+    '[{\n  direction: "Right",\n  clicks: 1\n}, {\n  direction: "Left",\n  clicks: 2\n}]',
+  ], // array of objects
 ];
 
 const FUNCTION_PARSERS = {
