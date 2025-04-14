@@ -26,7 +26,7 @@ import * as recast from "recast";
 const jexl = new Jexl();
 jexl.addTransforms({
   length: (val) => val.length,
-  some: (values, matchValue) => values.some((v) => v == matchValue),
+  some: (values, matchValue) => values.some((v) => v === matchValue),
   fromJSON: (jsonString, reviver) => JSON.parse(jsonString, reviver),
   toJSON: (obj, replacer, space) => JSON.stringify(obj, replacer, space),
 });
@@ -59,7 +59,7 @@ jexl.addFunction("now", () => Date.now());
 }
 {
   const ast = estreeFromJexlString(jexl, "[1,2,3] | some(1)");
-  recast.print(ast).code; // "[1, 2, 3].some((v) => v == 1)"
+  recast.print(ast).code; // "[1, 2, 3].some((v) => v === 1)"
 }
 
 // Functions are automatically converted from the source code of `addFunction`.
