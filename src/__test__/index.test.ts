@@ -71,11 +71,11 @@ const TEST_CASES: [string, string | null][] = [
   ["1 + (2 * 3)", "1 + 2 * 3"],
   ["(1 + 2) * 3", null],
   ["1 + 2 + 3 - 3 - 2 - 1", null],
-  ["a ^ 3", "Math.pow(a, 3)"],
+  ["a ^ 3", "a ** 3"],
   ["b // 10", "Math.floor(b / 10)"],
   [
     '1 // 2 * (foo["bar"] - 4) % 6 ^ foo[.bar == 1 * 2 * 3]',
-    'Math.floor(1 / 2) * Math.pow((foo?.["bar"] - 4) % 6, foo?.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3))',
+    'Math.floor(1 / 2) * ((foo?.["bar"] - 4) % 6) ** foo?.filter((\n  {\n    bar\n  }\n) => bar === 1 * 2 * 3)',
   ],
   ["3 in [1, 2, 3]", "[1, 2, 3].includes(3)"],
   ['"a" in ["a", "b", "c"]', '["a", "b", "c"].includes("a")'],

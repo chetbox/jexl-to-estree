@@ -35,7 +35,7 @@ jexl.addFunction("now", () => Date.now());
 // JEXL built-ins are converted to ECMAScript equivalents
 {
   const ast = estreeFromJexlString(jexl, "foo.bar ^ 2 == 16");
-  recast.print(ast).code; // "Math.pow(foo.bar, 2) === 16"
+  recast.print(ast).code; // "foo.bar ** 2 === 16"
 }
 // or use a JEXL AST
 {
@@ -43,7 +43,7 @@ jexl.addFunction("now", () => Date.now());
     jexl._grammar,
     jexl.compile("foo.bar ^ 2 == 16")._getAst()
   );
-  recast.print(ast).code; // "Math.pow(foo.bar, 2) === 16"
+  recast.print(ast).code; // "foo.bar ** 2 === 16"
 }
 
 // Transforms are automatically converted from the source code of `addTransforms`.

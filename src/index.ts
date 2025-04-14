@@ -230,14 +230,7 @@ function _estreeFromJexlAst(
             recur(ast.right)
           );
         case "^":
-          return b.callExpression(
-            b.memberExpression(
-              b.identifier("Math"),
-              b.identifier("pow"),
-              false
-            ),
-            [recur(ast.left), recur(ast.right)]
-          );
+          return b.binaryExpression("**", recur(ast.left), recur(ast.right));
         case "//":
           return b.callExpression(
             b.memberExpression(
