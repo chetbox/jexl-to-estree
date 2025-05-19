@@ -12,8 +12,11 @@ import {
 
 export interface EstreeFromJexlAstOptions {
   functionParser?: (func: string) => types.Program;
-  translateTransforms?: Record<string, (value: any, ...args: any[]) => any>;
-  translateFunctions?: Record<string, (...args: any[]) => any>;
+  translateTransforms?: Record<
+    string,
+    ((value: any, ...args: any[]) => any) | string
+  >;
+  translateFunctions?: Record<string, ((...args: any[]) => any) | string>;
   isIdentifierAlwaysDefined?: (identifier: string[]) => boolean;
 }
 
@@ -314,12 +317,14 @@ function _estreeFromJexlAst(
       const newAstFromFunction = (() => {
         switch (ast.pool) {
           case "transforms": {
-            const transformFunc =
+            const func =
               options.translateTransforms?.[ast.name] ??
               grammar.transforms[ast.name];
-            if (transformFunc) {
+            if (func) {
               const result = createExpressionFromFunction(
-                transformFunc,
+                typeof func === "string"
+                  ? new Function("return " + func)()
+                  : func,
                 ast.args.map(recur)
               );
               return result ? result : undefined;
@@ -332,7 +337,9 @@ function _estreeFromJexlAst(
               grammar.functions[ast.name];
             if (func) {
               const result = createExpressionFromFunction(
-                func,
+                typeof func === "string"
+                  ? new Function("return " + func)()
+                  : func,
                 ast.args.map(recur)
               );
               return result ? result : undefined;

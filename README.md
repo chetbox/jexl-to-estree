@@ -97,11 +97,17 @@ jexl.addFunction("now", () => Date.now());
     // Custom output code for specific Jexl transforms
     translateTransforms: {
       prefix: (value: string, arg: string) => arg + value,
+      // Transforms can also be passed as a function string.
+      // This is useful to avoid compilers and minifiers optimizing your function in unhelpful ways
+      suffix: "(value, arg) => value + arg"
     },
 
     // Custom output for specific Jexl function calls
     translateFunctions: {
       dateString: (value) => new Date(value).toString(),
+      // Functions can also be passed as a function string.
+      // This is useful to avoid compilers and minifiers optimizing your function in unhelpful ways
+      inc: "(value) => value + 1"
     },
   });
   recast.print(ast).code; // "'Date: ' + new Date().toString()"

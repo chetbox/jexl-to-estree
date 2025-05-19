@@ -40,10 +40,12 @@ jexl.addBinaryOp("..", 20, (a: number, b: number) => {
 
 const TRANSLATE_TRANSFORMS = {
   prefix: (value: string, arg: string) => arg + value,
+  suffix: "(value, arg) => value + arg",
 };
 
 const TRANSLATE_FUNCTIONS = {
   dateString: (value) => new Date(value).toString(),
+  inc: "function inc(value) { return value + 1 }",
 };
 
 const TEST_CASES: [string, string | null][] = [
@@ -125,8 +127,10 @@ const TEST_CASES: [string, string | null][] = [
     "dateString(1234567890) | prefix('Date: ')",
     '"Date: " + new Date(1234567890).toString()',
   ], // uses custom function and transform handler
+  ["2025 | suffix('AD')", '2025 + "AD"'], // uses custom transform handler specified as a string
   ["dateString()", "new Date(undefined).toString()"], // uses custom function handler, replacing the missing argument with `undefined`
   ["dateString(1234567890)", "new Date(1234567890).toString()"], // uses custom function with argument
+  ["inc(2)", "2 + 1"], // uses custom function specified as a string with argument
   [
     "print(foo) && bar",
     "(() => {\n  console.log(foo);\n  return true;\n})() && bar",
